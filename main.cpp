@@ -131,52 +131,104 @@ class HttpResponse {
         }
 };
 
+class MimeTypeHelper {
+    private:
+        static std::unordered_map<std::string, std::string> mimeMap;
+
+    public:
+        static std::string getMimeType(const std::string& extension) {
+            auto it = mimeMap.find(extension);
+            if (it != mimeMap.end()) {
+                return it->second;
+            }
+            return "application/octet-stream"; // Default for unknown/binary files
+        }
+};
+
+// Initialize the map
+std::unordered_map<std::string, std::string> MimeTypeHelper::mimeMap = {
+    {".html", "text/html"},
+    {".css",  "text/css"},
+    {".js",   "application/javascript"},
+    {".png",  "image/png"},
+    {".jpg",  "image/jpeg"},
+    {".ico",  "image/x-icon"},
+    {".txt",  "text/plain"},
+    {".pdf",  "application/pdf"}
+};
+
 
 int main() {
-    // SCENARIO A: Valid POST request with Content-Length
-    std::string validPost = 
-        "POST /api/users HTTP/1.1\r\n"
+    // // SCENARIO A: Valid POST request with Content-Length
+    // std::string validPost = 
+    //     "POST /api/users HTTP/1.1\r\n"
+    //     "Host: localhost\r\n"
+    //     "Content-Length: 15\r\n"
+    //     "\r\n"
+    //     "id=123&name=bob"; // 15 characters long
+
+    // try {
+    //     std::cout << "Testing Valid POST:\n";
+    //     HttpRequest reqA = RequestParser::parse(validPost);
+    //     reqA.print();
+    // } catch (const std::exception& e) {
+    //     std::cout << "Error: " << e.what() << "\n";
+    // }
+
+    // std::cout << "\n\n";
+
+    // // SCENARIO B: Invalid POST request (Missing Content-Length)
+    // std::string invalidPost = 
+    //     "POST /api/users HTTP/1.1\r\n"
+    //     "Host: localhost\r\n"
+    //     "\r\n"
+    //     "id=123&name=bob";
+
+    // try {
+    //     std::cout << "Testing Invalid POST:\n";
+    //     HttpRequest reqB = RequestParser::parse(invalidPost);
+    //     reqB.print();
+    // } catch (const std::exception& e) {
+    //     std::cout << "Rejected! -> " << e.what() << "\n";
+    // }
+
+    // std::cout << "\n\n";
+    // std::cout << "Testing Response:\n";
+
+    // HttpResponse res(200, "OK");
+    // res.setHeader("Content-Type", "applocation/json");
+    // res.setBody("{\"message\": \"Hello World\"}");
+
+    // std::string rawResponse = res.toString();
+
+    // std::cout << "--- Sending this to Client ---\n" << rawResponse << "\n";
+
+    // 1. The raw input string
+    std::string rawReq = 
+        "GET /styles.css HTTP/1.1\r\n"
         "Host: localhost\r\n"
-        "Content-Length: 15\r\n"
-        "\r\n"
-        "id=123&name=bob"; // 15 characters long
+        "\r\n";
+    // 2. Parse the string into our object
+    HttpRequest req = RequestParser::parse(rawReq);
 
-    try {
-        std::cout << "Testing Valid POST:\n";
-        HttpRequest reqA = RequestParser::parse(validPost);
-        reqA.print();
-    } catch (const std::exception& e) {
-        std::cout << "Error: " << e.what() << "\n";
-    }
-
-    std::cout << "\n\n";
-
-    // SCENARIO B: Invalid POST request (Missing Content-Length)
-    std::string invalidPost = 
-        "POST /api/users HTTP/1.1\r\n"
-        "Host: localhost\r\n"
-        "\r\n"
-        "id=123&name=bob";
-
-    try {
-        std::cout << "Testing Invalid POST:\n";
-        HttpRequest reqB = RequestParser::parse(invalidPost);
-        reqB.print();
-    } catch (const std::exception& e) {
-        std::cout << "Rejected! -> " << e.what() << "\n";
-    }
-
-    std::cout << "\n\n";
-    std::cout << "Testing Response:\n";
-
+    // 3. Create our response object 
     HttpResponse res(200, "OK");
-    res.setHeader("Content-Type", "applocation/json");
-    res.setBody("{\"message\": \"Hello World\"}");
 
-    std::string rawResponse = res.toString();
+    // 4. Extract path from the REQUEST object
+    std::string path = req.path;
 
-    std::cout << "--- Sending this to Client ---\n" << rawResponse << "\n";
+    // 5. Logic to find the extension
+    size_t dotPos = path.find_last_of('.');
+    std::string extension = (dotPos != std::string::npos) ? path.substr(dotPos) : "";
+
+    // 6. Set the header in the RESPONSE object
+    std::string contentType = MimeTypeHelper::getMimeType(extension);
+    res.setHeader("Content-Type", contentType);
+
+    // 7. Print to verify
+    std::cout << "Target File Path: " << path << "\n";
+    std::cout << "Detected Extension: " << extension << "\n";
+    std::cout << "Assigned Content-Type Header: " << contentType << "\n";
+    
     return 0;
 }
-
-
