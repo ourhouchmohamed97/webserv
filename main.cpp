@@ -145,16 +145,15 @@ class MimeTypeHelper {
         }
 };
 
-// Initialize the map
 std::unordered_map<std::string, std::string> MimeTypeHelper::mimeMap = {
     {".html", "text/html"},
-    {".css",  "text/css"},
-    {".js",   "application/javascript"},
-    {".png",  "image/png"},
-    {".jpg",  "image/jpeg"},
-    {".ico",  "image/x-icon"},
-    {".txt",  "text/plain"},
-    {".pdf",  "application/pdf"}
+    {".css", "text/css"},
+    {".js", "application/javascript"},
+    {".png", "image/png"}, 
+    {".jpeg", "image/jpeg"}, 
+    {".ico", "image/x-icon"},
+    {".txt", "image/plain"},
+    {".pdf", "applicaiton/pdf"},
 };
 
 
@@ -221,7 +220,7 @@ int main() {
     size_t dotPos = path.find_last_of('.');
     std::string extension = (dotPos != std::string::npos) ? path.substr(dotPos) : "";
 
-    // 6. Set the header in the RESPONSE object
+    // 6. Set Content-Type header from file extension in the RESPONSE object
     std::string contentType = MimeTypeHelper::getMimeType(extension);
     res.setHeader("Content-Type", contentType);
 
