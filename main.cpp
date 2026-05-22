@@ -4,8 +4,10 @@
 #include <sstream>
 #include <stdexcept>
 #include <algorithm>
+#include <fstream>
 
-struct HttpRequest {
+struct HttpRequest
+{
     std::string method;
     std::string path;
     std::string version;
@@ -16,13 +18,15 @@ struct HttpRequest {
 
     std::string body; // The optional payload.
 
-    void print() const {
+    void print() const
+    {
         std::cout << "=== HTTP REQUEST ===\n";
         std::cout << "Method: " << method << "\n";
         std::cout << "Path: " << path << "\n";
         std::cout << "Version: " << version << "\n";
         std::cout << "Headers:\n";
-        for (const auto& [key, value] : headers) {
+        for (const auto &[key, value] : headers)
+        {
             std::cout << " [" << key << "] -> " << value << "\n";
         }
 
@@ -31,135 +35,249 @@ struct HttpRequest {
     }
 };
 
-class RequestParser {
-    private:
-        // Helper function to trim trailing '\r' and leading/trailing spaces
-        static std::string trim(std::string str) {
-            if (!str.empty() && str.back() == '\r') {
-                str.pop_back();
-            }
-            // Basic space trimming
-            size_t first = str.find_first_not_of(" ");
-            if (first == std::string::npos) return "";
-            size_t last = str.find_last_not_of(" ");
-            return str.substr(first, (last - first + 1));
+class RequestParser
+{
+private:
+    // Helper function to trim trailing '\r' and leading/trailing spaces
+    static std::string trim(std::string str)
+    {
+        if (!str.empty() && str.back() == '\r')
+        {
+            str.pop_back();
         }
-    public:
-        static HttpRequest parse(const std::string& rawRequest) {
-            HttpRequest req;
-            std::stringstream requestStream(rawRequest);
-            std::string line;
-            // Parse Request Line
-            if (std::getline(requestStream, line)) {
-                line = trim(line);
-                std::stringstream lineStream(line);
-                lineStream >> req.method >> req.path >> req.version;
-            }
-            // Parse Headers up to Blank Line
-            while(std::getline(requestStream, line)) {
-                line = trim(line);
+        // Basic space trimming
+        size_t first = str.find_first_not_of(" ");
+        if (first == std::string::npos)
+            return "";
+        size_t last = str.find_last_not_of(" ");
+        return str.substr(first, (last - first + 1));
+    }
 
-                if (line.empty())
-                    break;
-                
-                size_t colonPos = line.find(':');
-                if (colonPos != std::string::npos) {
-                    std::string key = trim(line.substr(0, colonPos));
-                    std::string value = trim(line.substr(colonPos + 1));
-                    req.headers[key] = value;
+public:
+    static HttpRequest parse(const std::string &rawRequest)
+    {
+        HttpRequest req;
+        std::stringstream requestStream(rawRequest);
+        std::string line;
+        // Parse Request Line
+        if (std::getline(requestStream, line))
+        {
+            line = trim(line);
+            std::stringstream lineStream(line);
+            lineStream >> req.method >> req.path >> req.version;
+        }
+        // Parse Headers up to Blank Line
+        while (std::getline(requestStream, line))
+        {
+            line = trim(line);
+
+            if (line.empty())
+                break;
+
+            size_t colonPos = line.find(':');
+            if (colonPos != std::string::npos)
+            {
+                std::string key = trim(line.substr(0, colonPos));
+                std::string value = trim(line.substr(colonPos + 1));
+                req.headers[key] = value;
+            }
+        }
+
+        // POST Validation: Check Content-Length
+        if (req.method == "POST")
+        {
+            auto it = req.headers.find("Content-Length");
+            if (it == req.headers.end())
+            {
+                throw std::runtime_error("404 Bad Request: Missing Content-Length");
+            }
+
+            int contentLength = std::stoi(it->second);
+
+            if (contentLength > 0)
+            {
+                std::string remainingContent;
+                std::ostringstream remainder;
+                remainder << requestStream.rdbuf();
+                remainingContent = remainder.str();
+
+                if (remainingContent.length() >= static_cast<size_t>(contentLength))
+                {
+                    req.body = remainingContent.substr(0, contentLength);
+                }
+                else
+                {
+                    throw std::runtime_error("404 Bad Request: Body size less than Content-Length.");
                 }
             }
-
-            // POST Validation: Check Content-Length
-            if (req.method == "POST") {
-                auto it = req.headers.find("Content-Length");
-                if (it == req.headers.end()) {
-                    throw std::runtime_error("404 Bad Request: Missing Content-Length");
-                }
-
-                int contentLength = std::stoi(it->second);
-
-                if (contentLength > 0) {
-                    std::string remainingContent;
-                    std::ostringstream remainder;
-                    remainder << requestStream.rdbuf();
-                    remainingContent = remainder.str();
-                    
-                    if (remainingContent.length() >= static_cast<size_t>(contentLength)) {
-                        req.body = remainingContent.substr(0, contentLength);
-                    } else {
-                        throw std::runtime_error("404 Bad Request: Body size less than Content-Length.");
-                    }
-                }
-            }
-            return req;
-        } 
+        }
+        return req;
+    }
 };
 
-class HttpResponse {
-    private:
-        std::string version = "HTTP/1.1";
-        int statusCode;
-        std::string statusMessage;
-        std::unordered_map<std::string, std::string> headers;
-        std::string body;
+class HttpResponse
+{
+private:
+    std::string version = "HTTP/1.1";
+    int statusCode;
+    std::string statusMessage;
+    std::unordered_map<std::string, std::string> headers;
+    std::string body;
 
-    public:
-        HttpResponse (int code, std::string message) : statusCode(code), statusMessage(message) {}
+public:
+    HttpResponse(int code, std::string message) : statusCode(code), statusMessage(message) {}
 
-        void setHeader(const std::string& key, const std::string& value) {
-            headers[key] = value;
+    void setHeader(const std::string &key, const std::string &value)
+    {
+        headers[key] = value;
+    }
+
+    // Set Content-Length automatically from body size
+    void setBody(const std::string &b)
+    {
+        body = b;
+        setHeader("Content-Length", std::to_string(body.length()));
+    }
+    // Serialize response to raw bytes: status + headers + \r\n\r\n + body
+
+    std::string toString() const
+    {
+        std::stringstream ss;
+        ss << version << " " << statusCode << " " << statusMessage << "\r\n";
+
+        for (const auto &[key, value] : headers)
+        {
+            ss << key << ": " << value << "\r\n";
         }
 
-        // Set Content-Length automatically from body size
-        void setBody(const std::string& b) {
-            body = b;
-            setHeader("Content-Length", std::to_string(body.length()));
-        }
-        // Serialize response to raw bytes: status + headers + \r\n\r\n + body
-
-        std::string toString() const {
-            std::stringstream ss;
-            ss << version << " " << statusCode << " " << statusMessage << "\r\n";
-
-            for (const auto& [key, value] : headers) {
-                ss << key << ": " << value << "\r\n";
-            }
-
-            ss << "\r\n" << body;
-            return ss.str();
-        }
+        ss << "\r\n"
+           << body;
+        return ss.str();
+    }
 };
 
-class MimeTypeHelper {
-    private:
-        static std::unordered_map<std::string, std::string> mimeMap;
+class MimeTypeHelper
+{
+private:
+    static std::unordered_map<std::string, std::string> mimeMap;
 
-    public:
-        static std::string getMimeType(const std::string& extension) {
-            auto it = mimeMap.find(extension);
-            if (it != mimeMap.end()) {
-                return it->second;
-            }
-            return "application/octet-stream"; // Default for unknown/binary files
+public:
+    static std::string getMimeType(const std::string &extension)
+    {
+        auto it = mimeMap.find(extension);
+        if (it != mimeMap.end())
+        {
+            return it->second;
         }
+        return "application/octet-stream"; // Default for unknown/binary files
+    }
 };
 
 std::unordered_map<std::string, std::string> MimeTypeHelper::mimeMap = {
     {".html", "text/html"},
     {".css", "text/css"},
     {".js", "application/javascript"},
-    {".png", "image/png"}, 
-    {".jpeg", "image/jpeg"}, 
+    {".png", "image/png"},
+    {".jpeg", "image/jpeg"},
     {".ico", "image/x-icon"},
     {".txt", "image/plain"},
     {".pdf", "applicaiton/pdf"},
 };
 
 
-int main() {
+#include <string>
+
+class ErrorPageFactory {
+private:
+    // A reusable master template to avoid duplicating CSS styles
+    static std::string buildTemplate(const std::string& code, const std::string& title, const std::string& description) {
+        return R"(<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error )" + code + R"(: )" + title + R"(</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #121214;
+            color: #e1e1e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            max-width: 450px;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 6rem;
+            margin: 0;
+            color: #ff5555;
+            font-weight: 800;
+            letter-spacing: -2px;
+        }
+        h2 {
+            font-size: 1.5rem;
+            margin: 10px 0 20px 0;
+            color: #ff79c6;
+        }
+        p {
+            color: #8b92a5;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #44475a;
+            color: #f8f8f2;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+        .button:hover {
+            background-color: #6272a4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>)" + code + R"(</h1>
+        <h2>)" + title + R"(</h2>
+        <p>)" + description + R"(</p>
+        <a href="/" class="button">Back to Home</a>
+    </div>
+</body>
+</html>)";
+    }
+public:
+    static std::string getErrorPage(int statusCode) {
+        switch (statusCode) {
+            case 400:
+                return buildTemplate("400", "Bad Request", "The server could not understand the request due to malformed syntax.");
+            case 403:
+                return buildTemplate("403", "Forbidden", "You don't have permission to access this resource.");
+            case 404:
+                return buildTemplate("404", "Not Found", "The requested URL was not found on this server.");
+            case 405:
+                return buildTemplate("405", "Method Not Allowed", "The HTTP method used is not supported for this URL.");
+            case 500:
+                return buildTemplate("500", "Internal Server Error", "The server encountered an error and could not complete your request.");
+            default:
+                return buildTemplate(std::to_string(statusCode), "Error", "An unexpected error occurred.");
+        }
+    }
+};
+
+int main()
+{
     // // SCENARIO A: Valid POST request with Content-Length
-    // std::string validPost = 
+    // std::string validPost =
     //     "POST /api/users HTTP/1.1\r\n"
     //     "Host: localhost\r\n"
     //     "Content-Length: 15\r\n"
@@ -177,7 +295,7 @@ int main() {
     // std::cout << "\n\n";
 
     // // SCENARIO B: Invalid POST request (Missing Content-Length)
-    // std::string invalidPost = 
+    // std::string invalidPost =
     //     "POST /api/users HTTP/1.1\r\n"
     //     "Host: localhost\r\n"
     //     "\r\n"
@@ -202,32 +320,57 @@ int main() {
 
     // std::cout << "--- Sending this to Client ---\n" << rawResponse << "\n";
 
-    // 1. The raw input string
-    std::string rawReq = 
-        "GET /styles.css HTTP/1.1\r\n"
-        "Host: localhost\r\n"
-        "\r\n";
-    // 2. Parse the string into our object
-    HttpRequest req = RequestParser::parse(rawReq);
+    // === Mime Type ===
 
-    // 3. Create our response object 
-    HttpResponse res(200, "OK");
+    // // 1. The raw input string
+    // std::string rawReq =
+    //     "GET /styles.css HTTP/1.1\r\n"
+    //     "Host: localhost\r\n"
+    //     "\r\n";
+    // // 2. Parse the string into our object
+    // HttpRequest req = RequestParser::parse(rawReq);
 
-    // 4. Extract path from the REQUEST object
-    std::string path = req.path;
+    // // 3. Create our response object
+    // HttpResponse res(200, "OK");
 
-    // 5. Logic to find the extension
-    size_t dotPos = path.find_last_of('.');
-    std::string extension = (dotPos != std::string::npos) ? path.substr(dotPos) : "";
+    // // 4. Extract path from the REQUEST object
+    // std::string path = req.path;
 
-    // 6. Set Content-Type header from file extension in the RESPONSE object
-    std::string contentType = MimeTypeHelper::getMimeType(extension);
-    res.setHeader("Content-Type", contentType);
+    // // 5. Logic to find the extension
+    // size_t dotPos = path.find_last_of('.');
+    // std::string extension = (dotPos != std::string::npos) ? path.substr(dotPos) : "";
 
-    // 7. Print to verify
-    std::cout << "Target File Path: " << path << "\n";
-    std::cout << "Detected Extension: " << extension << "\n";
-    std::cout << "Assigned Content-Type Header: " << contentType << "\n";
+    // // 6. Set Content-Type header from file extension in the RESPONSE object
+    // std::string contentType = MimeTypeHelper::getMimeType(extension);
+    // res.setHeader("Content-Type", contentType);
+
+    // // 7. Print to verify
+    // std::cout << "Target File Path: " << path << "\n";
+    // std::cout << "Detected Extension: " << extension << "\n";
+    // std::cout << "Assigned Content-Type Header: " << contentType << "\n";
+
+    int errorCode = 404;
     
+    // 1. Generate the HTML string from your class factory
+    std::string errorHtml = ErrorPageFactory::getErrorPage(errorCode);
+    
+    // 2. Open a file stream to write on your computer disk
+    std::ofstream outFile("error404.html");
+    
+    if (outFile.is_open()) {
+        // Write the raw HTML string directly into the file
+        outFile << errorHtml;
+        outFile.close();
+        
+        std::cout << "--------------------------------------------------\n";
+        std::cout << " SUCCESS: 'error404.html' has been written to disk!\n";
+        std::cout << "--------------------------------------------------\n";
+        std::cout << "Next steps:\n";
+        std::cout << "1. Open your terminal directory folder.\n";
+        std::cout << "2. Double-click 'error404.html' to open it in a browser.\n";
+    } else {
+        std::cerr << "Error: Could not create file on disk.\n";
+    }
+
     return 0;
 }
