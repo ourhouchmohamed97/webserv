@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <vector>
 #include <sys/stat.h>
+#include <dirent.h>
 
 struct HttpRequest
 {
@@ -318,6 +319,31 @@ class PathResolver {
         }
 };
 
+
+class AutoIndex {
+    public:
+        static std::string generate(const std::string& path, const std::string& dirPath) {
+            std::string html = "<html><body><h1>Index of " + dirPath + "</h1><hr><ul>";
+            DIR* dir = opendir(path.c_str());
+            if (dir == NULL)
+                return "";
+
+            struct dirent* entry;
+            while((entry = readdir(dir)) != NULL) {
+                std::string name = entry->d_name;
+                if (name == ".")
+                    continue; // Skip current dir link
+
+                    // Generate a simple link for eack file/folder
+                    html += "<li><a href=\"" + name + "\">" + name + "</a></li>";
+            }
+
+            closedir(dir);
+            html += "</ul><hr></body></html>";
+            return html;
+        }
+};
+
 class StaticFileServer {
     public:
         static HttpResponse serveFile(const std::string& targetPath) {
@@ -336,14 +362,21 @@ class StaticFileServer {
                 return HttpResponse(404, "Not Found");
             // If it's a directory, look for index.html
             if(pathStat.st_mode & S_IFDIR) {
-                // Ensure path end with a slash before appending index.html
-                if (fullPath.back() != '/')
-                    fullPath += '/';
-                fullPath += "index.html";
+                std::string indexPath = fullPath + "/index.html";
 
-                // Re-check if this index.html actualy exists
-                if (stat(fullPath.c_str(), &pathStat) != 0)
-                    return HttpResponse(404, "Not Found");
+                // If index.html exists. serve it
+                if (access(indexPath.c_str(), F_OK) == 0) {
+                    fullPath = indexPath;
+                }
+                // Otherwise, if autoindex is ON, generate a list
+                else if (/* config file: autoindex = true */0 == 0) {
+                    HttpResponse res(200, "OK");
+                    res.setHeader("Content-Type", "text/html");
+                    res.setBody(AutoIndex::generate(fullPath, normalized));
+                    return res;
+                }
+                else
+                    return HttpResponse(403, "Forbidden");
             }
             // Check read permissions
             if (access(fullPath.c_str(), R_OK) == -1)
