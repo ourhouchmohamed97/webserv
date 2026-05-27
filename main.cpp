@@ -5,6 +5,9 @@
 #include <stdexcept>
 #include <algorithm>
 #include <fstream>
+#include <unistd.h>
+#include <vector>
+#include <sys/stat.h>
 
 struct HttpRequest
 {
@@ -185,8 +188,6 @@ std::unordered_map<std::string, std::string> MimeTypeHelper::mimeMap = {
 };
 
 
-#include <string>
-
 class ErrorPageFactory {
 private:
     // A reusable master template to avoid duplicating CSS styles
@@ -274,6 +275,104 @@ public:
     }
 };
 
+
+class PathResolver {
+    public:
+        // Decodes 20% to space, etc
+        static std::string urlDecode(std::string str) {
+            std::string ret;
+            for (size_t i = 0; i < str.length(); ++i) {
+                if (str[i] == '%' && i + 2 < str.length()) {
+                    int value = std::stoi(str.substr(i + 1, 2), NULL, 16);
+                    ret += static_cast<char>(value);
+                    i += 2;
+                }
+                else {
+                    ret += str[i];
+                }
+            }
+            return ret;
+        }
+
+        // Resolves . and .. compenents
+        static std::string normalize(std::string path) {
+            std::vector<std::string> parts;
+            std::stringstream ss(path);
+            std::string segment;
+            while (std::getline(ss, segment, '/')) {
+                if (segment == "" || segment == ".")
+                    continue;
+                if (segment == "..") {
+                    if (!parts.empty())
+                        parts.pop_back();
+                }
+                else
+                    parts.push_back(segment);
+            }
+            std::string result = "/";
+            for (const auto& p : parts)
+                result += p + "/";
+            if (result.length() > 1)
+                result.pop_back();
+            return result;
+        }
+};
+
+class StaticFileServer {
+    public:
+        static HttpResponse serveFile(const std::string& targetPath) {
+            // Hardcoded root directory for our sanity check purpose
+            const std::string rootDir = "./www";
+            
+            // 1. Normalize and Decode
+            std::string decodedPath = PathResolver::urlDecode(targetPath);
+            std::string normalized = PathResolver::normalize(decodedPath);
+
+            // 2. Build absolute path and check for traversal
+            std::string fullPath = rootDir + normalized;
+            // Check if path exist
+            struct stat pathStat;
+            if (stat(fullPath.c_str(), &pathStat) != 0)
+                return HttpResponse(404, "Not Found");
+            // If it's a directory, look for index.html
+            if(pathStat.st_mode & S_IFDIR) {
+                // Ensure path end with a slash before appending index.html
+                if (fullPath.back() != '/')
+                    fullPath += '/';
+                fullPath += "index.html";
+
+                // Re-check if this index.html actualy exists
+                if (stat(fullPath.c_str(), &pathStat) != 0)
+                    return HttpResponse(404, "Not Found");
+            }
+            // Check read permissions
+            if (access(fullPath.c_str(), R_OK) == -1)
+                return HttpResponse(403, "Forbidden");
+
+            // 4. If all checks pass, serve the file
+            return serveFileContent(fullPath, normalized); 
+        }
+    
+    private:
+        static HttpResponse serveFileContent(const std::string& fullPath, const std::string& normalized) {
+            std::ifstream file(fullPath, std::ios::in | std::ios::binary);
+
+            std::stringstream buffer;
+            buffer << file.rdbuf();
+            file.close();
+
+            HttpResponse res(200, "OK");
+            // Use normalized Path to determine the MIME Type
+            size_t dotPos = normalized.find_last_of('.');
+            std::string extension = (dotPos != std::string::npos) ? normalized.substr(dotPos) : "";
+            res.setHeader("Content-Type", MimeTypeHelper::getMimeType(extension));
+
+            res.setBody(buffer.str());
+            return res;
+        }
+};
+
+
 int main()
 {
     // // SCENARIO A: Valid POST request with Content-Length
@@ -349,28 +448,41 @@ int main()
     // std::cout << "Detected Extension: " << extension << "\n";
     // std::cout << "Assigned Content-Type Header: " << contentType << "\n";
 
-    int errorCode = 404;
+    // int errorCode = 404;
     
-    // 1. Generate the HTML string from your class factory
-    std::string errorHtml = ErrorPageFactory::getErrorPage(errorCode);
+    // // 1. Generate the HTML string from your class factory
+    // std::string errorHtml = ErrorPageFactory::getErrorPage(errorCode);
     
-    // 2. Open a file stream to write on your computer disk
-    std::ofstream outFile("error404.html");
+    // // 2. Open a file stream to write on your computer disk
+    // std::ofstream outFile("error404.html");
     
-    if (outFile.is_open()) {
-        // Write the raw HTML string directly into the file
-        outFile << errorHtml;
-        outFile.close();
+    // if (outFile.is_open()) {
+    //     // Write the raw HTML string directly into the file
+    //     outFile << errorHtml;
+    //     outFile.close();
         
-        std::cout << "--------------------------------------------------\n";
-        std::cout << " SUCCESS: 'error404.html' has been written to disk!\n";
-        std::cout << "--------------------------------------------------\n";
-        std::cout << "Next steps:\n";
-        std::cout << "1. Open your terminal directory folder.\n";
-        std::cout << "2. Double-click 'error404.html' to open it in a browser.\n";
-    } else {
-        std::cerr << "Error: Could not create file on disk.\n";
-    }
+    //     std::cout << "--------------------------------------------------\n";
+    //     std::cout << " SUCCESS: 'error404.html' has been written to disk!\n";
+    //     std::cout << "--------------------------------------------------\n";
+    //     std::cout << "Next steps:\n";
+    //     std::cout << "1. Open your terminal directory folder.\n";
+    //     std::cout << "2. Double-click 'error404.html' to open it in a browser.\n";
+    // } else {
+    //     std::cerr << "Error: Could not create file on disk.\n";
+    // }
 
+
+    HttpRequest req;
+    req.method = "GET";
+    req.path = "/index.js";
+
+    std::cout << "Client requested file: " << req.path << "\n";
+
+    HttpResponse response = StaticFileServer::serveFile(req.path);
+
+    std::string rawOutput = response.toString();
+    std::cout << "\n--- Raw Output Stream to Network Wire ---\n";
+    std::cout << rawOutput << "\n";
+    std::cout << "------------------------------------------\n";
     return 0;
 }
