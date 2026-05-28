@@ -9,6 +9,9 @@
 #include <vector>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <cstring>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 struct HttpRequest
 {
@@ -406,116 +409,103 @@ class StaticFileServer {
 };
 
 
+class HttpServer {
+    private:
+        int serverFd;
+        int port;
+    public:
+        HttpServer(int portNum) : serverFd(-1), port(portNum) {}
+        ~HttpServer() {
+            if (serverFd != -1) {
+                close(serverFd);
+            }
+        }
+
+        void init() {
+            // Create Socket: AF_INET (IPv4), SOCK_STREAM (TCP)
+            serverFd = socket(AF_INET, SOCK_STREAM, 0);
+            if (serverFd < 0) {
+                perror("Socket generation failed");
+                exit(EXIT_FAILURE);
+            }
+            // Forcefully attaching socket to the port to avoid "Address already in use" errors
+            int opt = 1;
+            setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+            // Bind Socket to IP and port
+            struct sockaddr_in address;
+            std::memset(&address, 0, sizeof(address));
+            address.sin_family = AF_INET;
+            address.sin_addr.s_addr = INADDR_ANY; // listen on all network interfaces
+            address.sin_port = htons(port);  // convert host byte order to network byte order
+
+            if (bind(serverFd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+                perror("Bind operator failed");
+                exit(EXIT_FAILURE);
+            }
+
+            // Listen for incoming connections (Backlog queue length = 10)
+            if (listen(serverFd, 10) < 0) {
+                perror("Listen operation failed");
+                exit(EXIT_FAILURE);
+            }
+
+            std::cout << "Server initialized safely. Listening on port " << port << "...\n";
+        }
+
+        void start() {
+            struct sockaddr_in clientAddress;
+            socklen_t clientLen = sizeof(clientAddress);
+
+            // The Master Server Infinite Event Loop
+            while (true) {
+                // Accept client connection block
+                int clientFd = accept(serverFd, (struct sockaddr*)&clientAddress, &clientLen);
+                if (clientFd < 0) {
+                    perror("Accepting connection failed");
+                    continue;
+                }
+                // Handle the I/O transactions
+                handleClient(clientFd);
+            }
+        }
+    private:
+        void handleClient(int clientFd) {
+            char buffer[4096] = {0};
+
+            // Read raw incoming network traffic bytes
+            ssize_t bytesRead = read(clientFd, buffer, sizeof(buffer) - 1);
+            if (bytesRead <= 0) {
+                close(clientFd);
+                return ;
+            }
+
+            std::string rawRequest(buffer, bytesRead);
+
+            // ---- Integration point with my engine ----
+            // Parse the incoming string using phase 1 code
+            HttpRequest req = RequestParser::parse(rawRequest);
+
+            // Process asset discovery using phase 3 code
+            HttpResponse res = StaticFileServer::serveFile(req.path);
+
+            // Serialize response structure using phase 2 code
+            std::string serializedOutput = res.toString();
+
+            // Send raw serialized bytes straight onto the socket wire
+            write(clientFd, serializedOutput.c_str(), serializedOutput.length());
+
+            // Standard HTTP/1.1 Non-persistent close strategy for now
+            close(clientFd);
+        }
+};
+
+
 int main()
 {
-    // // SCENARIO A: Valid POST request with Content-Length
-    // std::string validPost =
-    //     "POST /api/users HTTP/1.1\r\n"
-    //     "Host: localhost\r\n"
-    //     "Content-Length: 15\r\n"
-    //     "\r\n"
-    //     "id=123&name=bob"; // 15 characters long
+    const int PORT = 8080;
+    HttpServer server(PORT);
+    server.init();
+    server.start();
 
-    // try {
-    //     std::cout << "Testing Valid POST:\n";
-    //     HttpRequest reqA = RequestParser::parse(validPost);
-    //     reqA.print();
-    // } catch (const std::exception& e) {
-    //     std::cout << "Error: " << e.what() << "\n";
-    // }
-
-    // std::cout << "\n\n";
-
-    // // SCENARIO B: Invalid POST request (Missing Content-Length)
-    // std::string invalidPost =
-    //     "POST /api/users HTTP/1.1\r\n"
-    //     "Host: localhost\r\n"
-    //     "\r\n"
-    //     "id=123&name=bob";
-
-    // try {
-    //     std::cout << "Testing Invalid POST:\n";
-    //     HttpRequest reqB = RequestParser::parse(invalidPost);
-    //     reqB.print();
-    // } catch (const std::exception& e) {
-    //     std::cout << "Rejected! -> " << e.what() << "\n";
-    // }
-
-    // std::cout << "\n\n";
-    // std::cout << "Testing Response:\n";
-
-    // HttpResponse res(200, "OK");
-    // res.setHeader("Content-Type", "applocation/json");
-    // res.setBody("{\"message\": \"Hello World\"}");
-
-    // std::string rawResponse = res.toString();
-
-    // std::cout << "--- Sending this to Client ---\n" << rawResponse << "\n";
-
-    // === Mime Type ===
-
-    // // 1. The raw input string
-    // std::string rawReq =
-    //     "GET /styles.css HTTP/1.1\r\n"
-    //     "Host: localhost\r\n"
-    //     "\r\n";
-    // // 2. Parse the string into our object
-    // HttpRequest req = RequestParser::parse(rawReq);
-
-    // // 3. Create our response object
-    // HttpResponse res(200, "OK");
-
-    // // 4. Extract path from the REQUEST object
-    // std::string path = req.path;
-
-    // // 5. Logic to find the extension
-    // size_t dotPos = path.find_last_of('.');
-    // std::string extension = (dotPos != std::string::npos) ? path.substr(dotPos) : "";
-
-    // // 6. Set Content-Type header from file extension in the RESPONSE object
-    // std::string contentType = MimeTypeHelper::getMimeType(extension);
-    // res.setHeader("Content-Type", contentType);
-
-    // // 7. Print to verify
-    // std::cout << "Target File Path: " << path << "\n";
-    // std::cout << "Detected Extension: " << extension << "\n";
-    // std::cout << "Assigned Content-Type Header: " << contentType << "\n";
-
-    // int errorCode = 404;
-    
-    // // 1. Generate the HTML string from your class factory
-    // std::string errorHtml = ErrorPageFactory::getErrorPage(errorCode);
-    
-    // // 2. Open a file stream to write on your computer disk
-    // std::ofstream outFile("error404.html");
-    
-    // if (outFile.is_open()) {
-    //     // Write the raw HTML string directly into the file
-    //     outFile << errorHtml;
-    //     outFile.close();
-        
-    //     std::cout << "--------------------------------------------------\n";
-    //     std::cout << " SUCCESS: 'error404.html' has been written to disk!\n";
-    //     std::cout << "--------------------------------------------------\n";
-    //     std::cout << "Next steps:\n";
-    //     std::cout << "1. Open your terminal directory folder.\n";
-    //     std::cout << "2. Double-click 'error404.html' to open it in a browser.\n";
-    // } else {
-    //     std::cerr << "Error: Could not create file on disk.\n";
-    // }
-
-
-    HttpRequest req;
-    req.method = "GET";
-    req.path = "/index.js";
-
-    std::cout << "Client requested file: " << req.path << "\n";
-
-    HttpResponse response = StaticFileServer::serveFile(req.path);
-
-    std::string rawOutput = response.toString();
-    std::cout << "\n--- Raw Output Stream to Network Wire ---\n";
-    std::cout << rawOutput << "\n";
-    std::cout << "------------------------------------------\n";
     return 0;
 }
