@@ -348,64 +348,62 @@ class AutoIndex {
 };
 
 class StaticFileServer {
-    public:
-        static HttpResponse serveFile(const std::string& targetPath) {
-            // Hardcoded root directory for our sanity check purpose
-            const std::string rootDir = "./www";
+public:
+    static HttpResponse serveFile(const std::string& rawPath) {
+        const std::string rootDir = "./www";
+        
+        std::string decodedPath = PathResolver::urlDecode(rawPath);
+        std::string normalized = PathResolver::normalize(decodedPath);
+        std::string fullPath = rootDir + normalized;
+        std::string mimeLookupPath = normalized; // <-- Track this for the MIME type!
+
+        struct stat s;
+        if (stat(fullPath.c_str(), &s) != 0) {
+            return HttpResponse(404, "Not Found");
+        }
+
+        // If it's a directory, look for the index file
+        if (s.st_mode & S_IFDIR) {
+            if (fullPath.back() != '/') fullPath += '/';
+            fullPath += "index.html";
             
-            // 1. Normalize and Decode
-            std::string decodedPath = PathResolver::urlDecode(targetPath);
-            std::string normalized = PathResolver::normalize(decodedPath);
-
-            // 2. Build absolute path and check for traversal
-            std::string fullPath = rootDir + normalized;
-            // Check if path exist
-            struct stat pathStat;
-            if (stat(fullPath.c_str(), &pathStat) != 0)
+            // Crucial Fix: Update our MIME lookup path to reflect the new file!
+            mimeLookupPath = (normalized.back() == '/') ? normalized + "index.html" : normalized + "/index.html";
+            
+            if (stat(fullPath.c_str(), &s) != 0) {
                 return HttpResponse(404, "Not Found");
-            // If it's a directory, look for index.html
-            if(pathStat.st_mode & S_IFDIR) {
-                std::string indexPath = fullPath + "/index.html";
-
-                // If index.html exists. serve it
-                if (access(indexPath.c_str(), F_OK) == 0) {
-                    fullPath = indexPath;
-                }
-                // Otherwise, if autoindex is ON, generate a list
-                else if (/* config file: autoindex = true */0 == 0) {
-                    HttpResponse res(200, "OK");
-                    res.setHeader("Content-Type", "text/html");
-                    res.setBody(AutoIndex::generate(fullPath, normalized));
-                    return res;
-                }
-                else
-                    return HttpResponse(403, "Forbidden");
             }
-            // Check read permissions
-            if (access(fullPath.c_str(), R_OK) == -1)
-                return HttpResponse(403, "Forbidden");
-
-            // 4. If all checks pass, serve the file
-            return serveFileContent(fullPath, normalized); 
         }
-    
-    private:
-        static HttpResponse serveFileContent(const std::string& fullPath, const std::string& normalized) {
-            std::ifstream file(fullPath, std::ios::in | std::ios::binary);
 
-            std::stringstream buffer;
-            buffer << file.rdbuf();
-            file.close();
-
-            HttpResponse res(200, "OK");
-            // Use normalized Path to determine the MIME Type
-            size_t dotPos = normalized.find_last_of('.');
-            std::string extension = (dotPos != std::string::npos) ? normalized.substr(dotPos) : "";
-            res.setHeader("Content-Type", MimeTypeHelper::getMimeType(extension));
-
-            res.setBody(buffer.str());
-            return res;
+        if (access(fullPath.c_str(), R_OK) == -1) {
+            return HttpResponse(403, "Forbidden");
         }
+
+        // Pass the updated lookup path to the worker
+        return serveFileContent(fullPath, mimeLookupPath);
+    }
+
+private:
+    static HttpResponse serveFileContent(const std::string& fullPath, const std::string& pathForMime) {
+        std::ifstream file(fullPath, std::ios::in | std::ios::binary);
+        if (!file.is_open()) {
+            return HttpResponse(404, "Not Found");
+        }
+        
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        file.close();
+
+        HttpResponse res(200, "OK");
+        
+        // FIXED: Extracting the extension from pathForMime (e.g., "/index.html") instead of "/"
+        size_t dotPos = pathForMime.find_last_of('.');
+        std::string extension = (dotPos != std::string::npos) ? pathForMime.substr(dotPos) : "";
+        
+        res.setHeader("Content-Type", MimeTypeHelper::getMimeType(extension));
+        res.setBody(buffer.str());
+        return res;
+    }
 };
 
 
