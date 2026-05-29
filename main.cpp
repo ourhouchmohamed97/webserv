@@ -347,47 +347,116 @@ class AutoIndex {
         }
 };
 
+struct RedirectRule {
+    int statusCode; // 301 or 302
+    std::string location; // The URL to redirect to
+};
+
 class StaticFileServer {
-public:
-    static HttpResponse serveFile(const std::string& rawPath) {
-        const std::string rootDir = "./www";
+    public:
+    // Upgraded signature: Takes the raw path AND your server configuration rules
+    static HttpResponse serveFile(const std::string& rawPath, const ServerConfig& config, const std::unordered_map<std::string, RedirectRule>& redirectConfig) {
         
+        // 1. Normalize and URL-decode the client input path
         std::string decodedPath = PathResolver::urlDecode(rawPath);
         std::string normalized = PathResolver::normalize(decodedPath);
-        std::string fullPath = rootDir + normalized;
-        std::string mimeLookupPath = normalized; // <-- Track this for the MIME type!
 
-        struct stat s;
-        if (stat(fullPath.c_str(), &s) != 0) {
-            return HttpResponse(404, "Not Found");
+        // 2. CHECK REDIRECTS (301/302) BEFORE HITTING THE DISK
+        if (redirectConfig.count(normalized)) {
+            const RedirectRule& rule = redirectConfig.at(normalized);
+            HttpResponse res(rule.statusCode, (rule.statusCode == 301 ? "Moved Permanently" : "Found"));
+            res.setHeader("Location", rule.location);
+            return res;
         }
 
-        // If it's a directory, look for the index file
+        // 3. LONGEST-PREFIX ROUTE MATCHING
+        std::string matchedPrefix = RouteMatcher::match(normalized, config);
+        if (matchedPrefix.empty()) {
+            // Drop a fallback 404 error page if no prefix matches at all
+            HttpResponse errorRes(404, "Not Found");
+            errorRes.setHeader("Content-Type", "text/html");
+            errorRes.setBody(ErrorPageFactory::getErrorPage(404));
+            return errorRes;
+        }
+
+        const RouteConfig& matchedRoute = config.routes.at(matchedPrefix);
+
+        // 4. TRANSLATE URL PATH TO PHYSICAL HARD DRIVE PATH
+        // Strip the matched URL prefix and combine it with the configured root folder
+        std::string relativePath = normalized.substr(matchedPrefix.length());
+        std::string fullPath = matchedRoute.root;
+        if (!relativePath.empty() && relativePath.front() != '/' && fullPath.back() != '/') {
+            fullPath += "/";
+        }
+        fullPath += relativePath;
+
+        std::string mimeLookupPath = normalized;
+
+        // 5. SECURITY GUARD: Block Path Traversal Outside Configured Root
+        if (fullPath.find(matchedRoute.root) != 0) {
+            HttpResponse errorRes(403, "Forbidden");
+            errorRes.setHeader("Content-Type", "text/html");
+            errorRes.setBody(ErrorPageFactory::getErrorPage(403));
+            return errorRes;
+        }
+
+        // 6. PROCESS FILES AND DIRECTORIES USING OS STATS
+        struct stat s;
+        if (stat(fullPath.c_str(), &s) != 0) {
+            HttpResponse errorRes(404, "Not Found");
+            errorRes.setHeader("Content-Type", "text/html");
+            errorRes.setBody(ErrorPageFactory::getErrorPage(404));
+            return errorRes;
+        }
+
+        // Handle Directory Request
         if (s.st_mode & S_IFDIR) {
             if (fullPath.back() != '/') fullPath += '/';
-            fullPath += "index.html";
             
-            // Crucial Fix: Update our MIME lookup path to reflect the new file!
-            mimeLookupPath = (normalized.back() == '/') ? normalized + "index.html" : normalized + "/index.html";
-            
-            if (stat(fullPath.c_str(), &s) != 0) {
-                return HttpResponse(404, "Not Found");
+            std::string targetIndex = matchedRoute.indexFile.empty() ? "index.html" : matchedRoute.indexFile;
+            std::string indexPath = fullPath + targetIndex;
+
+            // Check if the route's configured index file actually exists on disk
+            if (stat(indexPath.c_str(), &s) == 0) {
+                fullPath = indexPath;
+                mimeLookupPath = (normalized.back() == '/') ? normalized + targetIndex : normalized + "/" + targetIndex;
+            } 
+            // DYNAMIC AUTOINDEX GENERATION (If no index file exists and feature is turned ON)
+            else if (matchedRoute.autoindex) {
+                HttpResponse res(200, "OK");
+                res.setHeader("Content-Type", "text/html");
+                res.setBody(AutoIndex::generate(fullPath, normalized)); // 'fullPath' here is the directory path
+                return res;
+            } 
+            // If no index file and autoindex is OFF -> Return 403 Forbidden
+            else {
+                HttpResponse errorRes(403, "Forbidden");
+                errorRes.setHeader("Content-Type", "text/html");
+                errorRes.setBody(ErrorPageFactory::getErrorPage(403));
+                return errorRes;
             }
         }
 
+        // 7. READ PERMISSIONS GUARD (Check if readable)
         if (access(fullPath.c_str(), R_OK) == -1) {
-            return HttpResponse(403, "Forbidden");
+            HttpResponse errorRes(403, "Forbidden");
+            errorRes.setHeader("Content-Type", "text/html");
+            errorRes.setBody(ErrorPageFactory::getErrorPage(403));
+            return errorRes;
         }
 
-        // Pass the updated lookup path to the worker
+        // 8. PASS VERIFIED SECURITY DATA TO WORKER FOR STREAMING
         return serveFileContent(fullPath, mimeLookupPath);
     }
 
-private:
+    private:
     static HttpResponse serveFileContent(const std::string& fullPath, const std::string& pathForMime) {
         std::ifstream file(fullPath, std::ios::in | std::ios::binary);
         if (!file.is_open()) {
-            return HttpResponse(404, "Not Found");
+            HttpResponse errorRes(404, "Not Found");
+            errorRes.setHeader("Content-Type", "text/html");
+            errorRes.setBody(ErrorPageFactory::getErrorPage(404));
+            return errorRes;
         }
         
         std::stringstream buffer;
@@ -396,7 +465,6 @@ private:
 
         HttpResponse res(200, "OK");
         
-        // FIXED: Extracting the extension from pathForMime (e.g., "/index.html") instead of "/"
         size_t dotPos = pathForMime.find_last_of('.');
         std::string extension = (dotPos != std::string::npos) ? pathForMime.substr(dotPos) : "";
         
@@ -497,13 +565,80 @@ class HttpServer {
         }
 };
 
+struct RouteConfig {
+    std::string root; // e.g., "./www/images_folder" or "./www/root_folder"
+    bool autoindex; // On or Off
+    std::string indexFile; // Defualt to "index.html"
+};
+
+// A map representing our server configuration 
+// Key: the url prefix (route) => Value: the specific rutes for the route
+class ServerConfig {
+    public:
+        std::unordered_map<std::string, RouteConfig> routes;
+
+        // Helper to add routes easily during initialization
+        void addRoute(const std::string& path, const RouteConfig& config) {
+            routes[path] = config;
+        }
+};
+
+class RouteMatcher {
+    public:
+        // Returns the matching route key (prefix string) for a given request path 
+        static std::string match(const std::string& requestPath, const ServerConfig& config) {
+            std::string bestMatch = "";
+            size_t longestMatchLength = 0;
+
+            for (const auto& [routePrefix, routeOpts] : config.routes) {
+                // Check if the request path starts with the route prefix
+                if (requestPath.rfind(routePrefix, 0) == 0) {
+                    // If it's a match, and is longer than our previous best match, update it
+                    if (routePrefix.length() > longestMatchLength) {
+                        longestMatchLength = routePrefix.length();
+                        bestMatch = routePrefix;
+                    }
+                }
+            }
+            return bestMatch;
+        }
+};
+
 
 int main()
 {
-    const int PORT = 8080;
-    HttpServer server(PORT);
-    server.init();
-    server.start();
+    // const int PORT = 8080;
+    // HttpServer server(PORT);
+    // server.init();
+    // server.start();
 
+    // Setup our configuration rules
+    ServerConfig config;
+
+    // Route 1: The general fallback root route
+    RouteConfig rootRoute;
+    rootRoute.root = "./www/main_site";
+    rootRoute.autoindex = false;
+    rootRoute.indexFile = "index.html";
+    config.addRoute("/", rootRoute);
+
+    // Route 2: The more specific images directory asset route
+    RouteConfig imageRoute;
+    imageRoute.root = "./www/global_images";
+    imageRoute.autoindex = true; // allow directory browsing here!
+    imageRoute.indexFile = "index.html";
+    config.addRoute("/images/", imageRoute);
+
+    // Test Case A: User requests a basic path
+    std::string testPathA = "/about.html";
+    std::string matchA = RouteMatcher::match(testPathA, config);
+    std::cout << "Path: " << testPathA << " -> Matches Prefix: '" << matchA << "'\n"; 
+    // Output: Matches Prefix: '/'
+
+    // Test Case B: User requests an asset path (Longest Prefix wins!)
+    std::string testPathB = "/images/gallery/avatar.png";
+    std::string matchB = RouteMatcher::match(testPathB, config);
+    std::cout << "Path: " << testPathB << " -> Matches Prefix: '" << matchB << "'\n"; 
+    // Output: Matches Prefix: '/images/' because 8 characters beats 1 character ('/')!
     return 0;
 }
