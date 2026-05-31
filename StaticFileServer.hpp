@@ -57,6 +57,31 @@ public:
             return errorRes;
         }
 
+        if (req.method == "POST") {
+            auto it = req.headers.find("Content-Length");
+            if (it == req.headers.end()) {
+                HttpResponse errorRes(411, "Length Required");
+                errorRes.setHeader("Content-Type", "text/html");
+                errorRes.setBody(ErrorPageFactory::getErrorPage(411));
+                return errorRes;
+            }
+
+            try {
+                size_t contentLength = std::stoull(it->second);
+                if (contentLength > matchedRoute.clientMaxBodySize) {
+                    HttpResponse errorRes(413, "Payload Too Large");
+                    errorRes.setHeader("Content-Type", "text/html");
+                    errorRes.setBody(ErrorPageFactory::getErrorPage(413));
+                    return errorRes;
+                }
+            } catch (const std::exception& e) {
+                HttpResponse errorRes(400, "Bad Request");
+                errorRes.setHeader("Content-Type", "text/html");
+                errorRes.setBody(ErrorPageFactory::getErrorPage(400));
+                return errorRes;
+            }
+        }
+
         // 4. Translate URL path to local physical path
         std::string relativePath = normalized.substr(matchedPrefix.length());
         std::string fullPath = matchedRoute.root;
