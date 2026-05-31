@@ -7,6 +7,7 @@
 #include "ErrorPageFactory.hpp"
 #include "AutoIndex.hpp"
 #include "MimeTypeHelper.hpp"
+#include "MultipartParser.hpp"
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fstream>
@@ -80,6 +81,23 @@ public:
                 errorRes.setBody(ErrorPageFactory::getErrorPage(400));
                 return errorRes;
             }
+
+            // Multipart content extraction
+            UploadedFile uploadedFile = MultipartParser::parse(req);
+            if (!uploadedFile.success) {
+                HttpResponse errorRes(400, "Bad Request");
+                errorRes.setHeader("Content-Type", "text/html");
+                errorRes.setBody(ErrorPageFactory::getErrorPage(400));
+                return errorRes;
+            }
+
+            // Success response detailing the isolated data parts
+            HttpResponse uploadSuccessRes(201, "Created");
+            uploadSuccessRes.setHeader("Content-Type", "text/plain");
+            uploadSuccessRes.setBody("Successfully Parsed Upload!\n"
+                             "Filename: " + uploadedFile.filename + "\n"
+                             "Size: " + std::to_string(uploadedFile.content.length()) + " bytes\n");
+            return uploadSuccessRes;
         }
 
         // 4. Translate URL path to local physical path
