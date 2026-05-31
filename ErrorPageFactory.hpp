@@ -80,6 +80,8 @@ class ErrorPageFactory {
                 return buildTemplate("404", "Not Found", "The requested URL was not found on this server.");
             case 405:
                 return buildTemplate("405", "Method Not Allowed", "The HTTP method used is not supported for this URL.");
+            case 413:
+                return buildTemplate("413", "Payload Too Large", "The transmitted body payload exceeds the maximum upload capacity configured for this route.");
             case 500:
                 return buildTemplate("500", "Internal Server Error", "The server encountered an error and could not complete your request.");
             default:
