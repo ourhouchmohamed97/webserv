@@ -33,8 +33,10 @@ public:
             }
         }
         std::string result = "/";
-        for (const auto& p : parts) result += p + "/";
-        if (result.length() > 1) result.pop_back();
+        for (const auto& p : parts)
+            result += p + "/";
+        if (result.length() > 1)
+            result.pop_back();
         return result;
     }
 };

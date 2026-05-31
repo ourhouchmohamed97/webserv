@@ -72,15 +72,66 @@ public:
 
 private:
     void handleClient(int clientFd) {
-        char buffer[4096] = {0};
-        ssize_t bytesRead = read(clientFd, buffer, sizeof(buffer) - 1);
-        if (bytesRead <= 0) {
-            close(clientFd);
-            return;
+        std::string rawRequest;
+        char chunk[4096];
+        ssize_t bytesRead = 0;
+        size_t headerEnd = std::string::npos;
+        size_t contentLength = 0;
+        bool hasContentLength = false;
+
+        // 1. Read until we have at least received the complete header block (\r\n\r\n)
+        while (true) {
+            bytesRead = read(clientFd, chunk, sizeof(chunk));
+            if (bytesRead <= 0) {
+                if (rawRequest.empty()) {
+                    close(clientFd);
+                    return;
+                }
+                break; // Socket closed or block complete
+            }
+            rawRequest.append(chunk, bytesRead);
+
+            // Check if we hit the end of the HTTP headers
+            headerEnd = rawRequest.find("\r\n\r\n");
+            if (headerEnd != std::string::npos) {
+                break; // Headers fully read!
+            }
         }
 
-        std::string rawRequest(buffer, bytesRead);
-        
+        // 2. Parse out Content-Length from the header block if it exists
+        size_t clPos = rawRequest.find("Content-Length:");
+        if (clPos != std::string::npos && clPos < headerEnd) {
+            size_t valStart = clPos + 15; // length of "Content-Length:"
+            size_t valEnd = rawRequest.find("\r\n", valStart);
+            if (valEnd != std::string::npos) {
+                std::string clStr = rawRequest.substr(valStart, valEnd - valStart);
+                // Trim potential spaces
+                clStr.erase(0, clStr.find_first_not_of(" "));
+                try {
+                    contentLength = std::stoull(clStr);
+                    hasContentLength = true;
+                } catch (...) {
+                    hasContentLength = false;
+                }
+            }
+        }
+
+        // 3. Keep reading from socket until the FULL body is buffered
+        if (hasContentLength && contentLength > 0) {
+            size_t headerBlockLength = headerEnd + 4; // Add the size of "\r\n\r\n"
+            size_t totalExpectedBytes = headerBlockLength + contentLength;
+
+            // Loop until our rawRequest string accumulates everything
+            while (rawRequest.length() < totalExpectedBytes) {
+                bytesRead = read(clientFd, chunk, sizeof(chunk));
+                if (bytesRead <= 0) {
+                    break; // Client disconnected or transmission failed
+                }
+                rawRequest.append(chunk, bytesRead);
+            }
+        }
+
+        // 4. Feed the fully aggregated buffer to the rest of your server engine
         try {
             HttpRequest req = RequestParser::parse(rawRequest);
             HttpResponse res = StaticFileServer::serveFile(req, config, redirects);
