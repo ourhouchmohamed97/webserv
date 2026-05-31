@@ -14,6 +14,7 @@ struct RouteConfig {
     bool autoindex;         // true or false
     std::string indexFile;  // Default to "index.html"
     std::vector<std::string> allowedMethods; // e.g., {"GET", "POST"}
+    size_t clientMaxBodySize; // limit for request body size in bytes
 };
 
 class ServerConfig {
