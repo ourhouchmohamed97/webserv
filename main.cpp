@@ -11,6 +11,7 @@ int main() {
     rootRoute.autoindex = false;
     rootRoute.indexFile = "index.html";
     rootRoute.allowedMethods = {"GET"}; // <-- ALLOWED METHODS LISTED
+    rootRoute.clientMaxBodySize = 1048576; // 1 MB fallback limit
     config.addRoute("/", rootRoute);
 
     // Route 2: The images directory asset route (Allows GET and POST)
@@ -19,7 +20,8 @@ int main() {
     imageRoute.autoindex = true; 
     imageRoute.indexFile = "index.html";
     imageRoute.allowedMethods = {"GET", "POST"}; // <-- ALLOWED METHODS LISTED
-    config.addRoute("/images/", imageRoute);
+    imageRoute.clientMaxBodySize = 100; // Strict upload limit: 100 Bytes!
+    config.addRoute("/images", imageRoute);
 
     std::unordered_map<std::string, RedirectRule> redirects;
     redirects["/old-home"] = {301, "/index.html"};
