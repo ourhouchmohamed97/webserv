@@ -20,7 +20,7 @@ int main() {
     imageRoute.autoindex = true; 
     imageRoute.indexFile = "index.html";
     imageRoute.allowedMethods = {"GET", "POST"}; // <-- ALLOWED METHODS LISTED
-    imageRoute.clientMaxBodySize = 100; // Strict upload limit: 100 Bytes!
+    imageRoute.clientMaxBodySize = 10485760; // Strict upload limit: 10 MB!
     config.addRoute("/images", imageRoute);
 
     std::unordered_map<std::string, RedirectRule> redirects;
