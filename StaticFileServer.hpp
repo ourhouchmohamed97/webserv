@@ -91,6 +91,33 @@ public:
                 return errorRes;
             }
 
+            // Resolve target upload directory path
+            std::string uploadDir = matchedRoute.root;
+            if (uploadDir.empty()) {
+                uploadDir = "."; // Default fallback to current directory
+            }
+
+            // Ensure the folder path has a clean trailing slash operation
+            if (uploadDir.back() != '/') {
+                uploadDir += '/';
+            }
+
+            // Combine path root with extracted filename string
+            std::string targetFilePath = uploadDir + uploadedFile.filename;
+
+            // Write binary content payload to local disk
+            std::ofstream out(targetFilePath, std::ios::out | std::ios::binary);
+            if (!out.is_open()) {
+                // If the server fails to open/create the file
+                HttpResponse errorRes(500, "Internal Server Error");
+                errorRes.setHeader("Content-Type", "text/html");
+                errorRes.setBody(ErrorPageFactory::getErrorPage(500));
+                return errorRes;
+            }
+
+            out.write(uploadedFile.content.data(), uploadedFile.content.length());
+            out.close();
+
             // Success response detailing the isolated data parts
             HttpResponse uploadSuccessRes(201, "Created");
             uploadSuccessRes.setHeader("Content-Type", "text/plain");
