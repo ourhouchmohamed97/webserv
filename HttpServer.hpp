@@ -103,74 +103,96 @@ private:
         std::string headersOnly = rawRequest.substr(0, headerBlockLength);
 
         // 2. Determine encoding specifications from headers
-        // Check for Transfer-Encoding: chunked
-        if (headersOnly.find("Transfer-Encoding: chunked") != std::string::npos) {
-            isChunked = true;
-        } else {
-            // Check for normal Content-Length fallback
-            size_t clPos = headersOnly.find("Content-Length:");
-            if (clPos != std::string::npos) {
-                size_t valStart = clPos + 15;
-                size_t valEnd = headersOnly.find("\r\n", valStart);
-                if (valEnd != std::string::npos) {
-                    std::string clStr = headersOnly.substr(valStart, valEnd - valStart);
-                    clStr.erase(0, clStr.find_first_not_of(" "));
-                    try {
-                        contentLength = std::stoull(clStr);
-                        hasContentLength = true;
-                    } catch (...) {
-                        hasContentLength = false;
-                    }
+        // ALWAYS check for Content-Length availability first to parse standard curl -d flags safely
+        size_t clPos = headersOnly.find("Content-Length:");
+        if (clPos != std::string::npos) {
+            size_t valStart = clPos + 15;
+            size_t valEnd = headersOnly.find("\r\n", valStart);
+            if (valEnd != std::string::npos) {
+                std::string clStr = headersOnly.substr(valStart, valEnd - valStart);
+                clStr.erase(0, clStr.find_first_not_of(" "));
+                try {
+                    contentLength = std::stoull(clStr);
+                    hasContentLength = true;
+                } catch (...) {
+                    hasContentLength = false;
                 }
             }
         }
 
-        // 3. Read loop for standard Content-Length payload
-        if (!isChunked && hasContentLength && contentLength > 0) {
+        if (headersOnly.find("Transfer-Encoding: chunked") != std::string::npos) {
+            isChunked = true;
+        }
+
+        // 3 & 4. Consolidated Read Engine
+        // 3 & 4. Consolidated Read Engine
+        if (isChunked) {
+            // DUAL-HEADER MITIGATION: If curl passed Content-Length along with Chunked, use the size!
+            if (hasContentLength && contentLength > 0) {
+                size_t totalExpectedBytes = headerBlockLength + contentLength;
+                while (rawRequest.length() < totalExpectedBytes) {
+                    bytesRead = read(clientFd, chunk, sizeof(chunk));
+                    if (bytesRead <= 0) break;
+                    rawRequest.append(chunk, bytesRead);
+                }
+            } 
+            // PURE CHUNKED STREAM: No content-length given. Read until terminating chunk marker.
+            else {
+                while (rawRequest.find("\r\n0\r\n\r\n") == std::string::npos && 
+                       rawRequest.substr(rawRequest.length() >= 5 ? rawRequest.length() - 5 : 0) != "0\r\n\r\n") {
+                    bytesRead = read(clientFd, chunk, sizeof(chunk));
+                    if (bytesRead <= 0) break;
+                    rawRequest.append(chunk, bytesRead);
+                }
+            }
+
+            // Isolate the body content from the headers
+            std::string rawBody = rawRequest.substr(headerBlockLength);
+            
+            // Decode the raw chunk stream back into plain text data
+            std::pair<bool, std::string> decodeResult = ChunkDecoder::decode(rawBody);
+
+            // --- SURGICAL HEADER CLEANING ---
+            std::string safeHeaders = headersOnly;
+
+            // 1. Erase any old Transfer-Encoding header line completely
+            size_t tePos = safeHeaders.find("Transfer-Encoding:");
+            if (tePos != std::string::npos) {
+                size_t teEnd = safeHeaders.find("\r\n", tePos);
+                if (teEnd != std::string::npos) {
+                    safeHeaders.erase(tePos, (teEnd + 2) - tePos);
+                }
+            }
+
+            // 2. Erase any old Content-Length header line completely
+            size_t clHeaderPos = safeHeaders.find("Content-Length:");
+            if (clHeaderPos != std::string::npos) {
+                size_t clHeaderEnd = safeHeaders.find("\r\n", clHeaderPos);
+                if (clHeaderEnd != std::string::npos) {
+                    safeHeaders.erase(clHeaderPos, (clHeaderEnd + 2) - clHeaderPos);
+                }
+            }
+
+            // 3. Strip the trailing trailing delimiter "\r\n\r\n" to append safely
+            size_t trailingDelim = safeHeaders.find("\r\n\r\n");
+            if (trailingDelim != std::string::npos) {
+                safeHeaders = safeHeaders.substr(0, trailingDelim + 2); // keep only one trailing \r\n
+            }
+
+            // 4. Inject our calculated clean Content-Length header line safely
+            safeHeaders += "Content-Length: " + std::to_string(decodeResult.second.length()) + "\r\n\r\n";
+
+            // Reassemble the sanitized request package flawlessly
+            rawRequest = safeHeaders + decodeResult.second;
+        }
+        // STANDARD STATIC CONFIGURATION FALLBACK: Normal requests containing content-length properties
+        else if (hasContentLength && contentLength > 0) {
             size_t totalExpectedBytes = headerBlockLength + contentLength;
             while (rawRequest.length() < totalExpectedBytes) {
                 bytesRead = read(clientFd, chunk, sizeof(chunk));
                 if (bytesRead <= 0) break;
                 rawRequest.append(chunk, bytesRead);
             }
-        }
-        // 4. Read loop for Transfer-Encoding: chunked payload
-        else if (isChunked) {
-            // Read until we safely locate the terminating chunk marker sequences "0\r\n\r\n"
-            while (rawRequest.find("\r\n0\r\n\r\n") == std::string::npos && 
-                   rawRequest.substr(rawRequest.length() >= 5 ? rawRequest.length() - 5 : 0) != "0\r\n\r\n") {
-                bytesRead = read(clientFd, chunk, sizeof(chunk));
-                if (bytesRead <= 0) break;
-                rawRequest.append(chunk, bytesRead);
-            }
-
-            // Separate the headers block from the raw chunked body
-            std::string rawBody = rawRequest.substr(headerBlockLength);
-            
-            // Decode the raw chunk stream back into plain text data
-            std::pair<bool, std::string> decodeResult = ChunkDecoder::decode(rawBody);
-            if (!decodeResult.first) {
-                HttpResponse errRes(400, "Bad Request (Malformed Chunked Stream)");
-                errRes.setHeader("Content-Type", "text/html");
-                errRes.setBody(ErrorPageFactory::getErrorPage(400));
-                write(clientFd, errRes.toString().c_str(), errRes.toString().length());
-                close(clientFd);
-                return;
-            }
-
-            // Normalization Step: Rebuild the rawRequest string into a standard HTTP format
-            // Remove the 'Transfer-Encoding: chunked' header line
-            size_t tePos = headersOnly.find("Transfer-Encoding: chunked\r\n");
-            if (tePos != std::string::npos) {
-                headersOnly.erase(tePos, 28);
-            }
-
-            // Inject an accurate Content-Length reflecting our compiled body block length
-            std::string newClHeader = "Content-Length: " + std::to_string(decodeResult.second.length()) + "\r\n";
-            headersOnly.insert(headerEnd, newClHeader);
-
-            // Stitch the updated header blocks back directly to our decrypted flat text body payload
-            rawRequest = headersOnly + decodeResult.second;
         }
 
         // 5. Feed the normalized data bundle straight through to your routing pipeline
@@ -188,5 +210,4 @@ private:
 
         close(clientFd);
     }
-
 };
