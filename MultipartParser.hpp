@@ -17,8 +17,12 @@ class MultipartParser {
 
             // Extract boundary from Content-Type header
             auto it = req.headers.find("Content-Type");
-            if (it == req.headers.end())
+            if (it == req.headers.end() || it->second.find("boundary=") == std::string::npos) {
+                fileResult.filename = "raw_payload.txt";
+                fileResult.content = req.body;
+                fileResult.success = true;
                 return fileResult; // No Content-Type header
+            }
 
             std::string contentType = it->second;
             size_t boundaryPos = contentType.find("boundary=");
