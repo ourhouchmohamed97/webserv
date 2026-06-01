@@ -4,6 +4,7 @@
 #include "RequestParser.hpp"
 #include "StaticFileServer.hpp"
 #include "Config.hpp"
+#include "ChunkDecoder.hpp"
 #include <iostream>
 #include <cstring>
 #include <unistd.h>
@@ -78,6 +79,7 @@ private:
         size_t headerEnd = std::string::npos;
         size_t contentLength = 0;
         bool hasContentLength = false;
+        bool isChunked = false;
 
         // 1. Read until we have at least received the complete header block (\r\n\r\n)
         while (true) {
@@ -87,51 +89,91 @@ private:
                     close(clientFd);
                     return;
                 }
-                break; // Socket closed or block complete
+                break;
             }
             rawRequest.append(chunk, bytesRead);
 
-            // Check if we hit the end of the HTTP headers
             headerEnd = rawRequest.find("\r\n\r\n");
             if (headerEnd != std::string::npos) {
                 break; // Headers fully read!
             }
         }
 
-        // 2. Parse out Content-Length from the header block if it exists
-        size_t clPos = rawRequest.find("Content-Length:");
-        if (clPos != std::string::npos && clPos < headerEnd) {
-            size_t valStart = clPos + 15; // length of "Content-Length:"
-            size_t valEnd = rawRequest.find("\r\n", valStart);
-            if (valEnd != std::string::npos) {
-                std::string clStr = rawRequest.substr(valStart, valEnd - valStart);
-                // Trim potential spaces
-                clStr.erase(0, clStr.find_first_not_of(" "));
-                try {
-                    contentLength = std::stoull(clStr);
-                    hasContentLength = true;
-                } catch (...) {
-                    hasContentLength = false;
+        size_t headerBlockLength = headerEnd + 4;
+        std::string headersOnly = rawRequest.substr(0, headerBlockLength);
+
+        // 2. Determine encoding specifications from headers
+        // Check for Transfer-Encoding: chunked
+        if (headersOnly.find("Transfer-Encoding: chunked") != std::string::npos) {
+            isChunked = true;
+        } else {
+            // Check for normal Content-Length fallback
+            size_t clPos = headersOnly.find("Content-Length:");
+            if (clPos != std::string::npos) {
+                size_t valStart = clPos + 15;
+                size_t valEnd = headersOnly.find("\r\n", valStart);
+                if (valEnd != std::string::npos) {
+                    std::string clStr = headersOnly.substr(valStart, valEnd - valStart);
+                    clStr.erase(0, clStr.find_first_not_of(" "));
+                    try {
+                        contentLength = std::stoull(clStr);
+                        hasContentLength = true;
+                    } catch (...) {
+                        hasContentLength = false;
+                    }
                 }
             }
         }
 
-        // 3. Keep reading from socket until the FULL body is buffered
-        if (hasContentLength && contentLength > 0) {
-            size_t headerBlockLength = headerEnd + 4; // Add the size of "\r\n\r\n"
+        // 3. Read loop for standard Content-Length payload
+        if (!isChunked && hasContentLength && contentLength > 0) {
             size_t totalExpectedBytes = headerBlockLength + contentLength;
-
-            // Loop until our rawRequest string accumulates everything
             while (rawRequest.length() < totalExpectedBytes) {
                 bytesRead = read(clientFd, chunk, sizeof(chunk));
-                if (bytesRead <= 0) {
-                    break; // Client disconnected or transmission failed
-                }
+                if (bytesRead <= 0) break;
                 rawRequest.append(chunk, bytesRead);
             }
         }
+        // 4. Read loop for Transfer-Encoding: chunked payload
+        else if (isChunked) {
+            // Read until we safely locate the terminating chunk marker sequences "0\r\n\r\n"
+            while (rawRequest.find("\r\n0\r\n\r\n") == std::string::npos && 
+                   rawRequest.substr(rawRequest.length() >= 5 ? rawRequest.length() - 5 : 0) != "0\r\n\r\n") {
+                bytesRead = read(clientFd, chunk, sizeof(chunk));
+                if (bytesRead <= 0) break;
+                rawRequest.append(chunk, bytesRead);
+            }
 
-        // 4. Feed the fully aggregated buffer to the rest of your server engine
+            // Separate the headers block from the raw chunked body
+            std::string rawBody = rawRequest.substr(headerBlockLength);
+            
+            // Decode the raw chunk stream back into plain text data
+            std::pair<bool, std::string> decodeResult = ChunkDecoder::decode(rawBody);
+            if (!decodeResult.first) {
+                HttpResponse errRes(400, "Bad Request (Malformed Chunked Stream)");
+                errRes.setHeader("Content-Type", "text/html");
+                errRes.setBody(ErrorPageFactory::getErrorPage(400));
+                write(clientFd, errRes.toString().c_str(), errRes.toString().length());
+                close(clientFd);
+                return;
+            }
+
+            // Normalization Step: Rebuild the rawRequest string into a standard HTTP format
+            // Remove the 'Transfer-Encoding: chunked' header line
+            size_t tePos = headersOnly.find("Transfer-Encoding: chunked\r\n");
+            if (tePos != std::string::npos) {
+                headersOnly.erase(tePos, 28);
+            }
+
+            // Inject an accurate Content-Length reflecting our compiled body block length
+            std::string newClHeader = "Content-Length: " + std::to_string(decodeResult.second.length()) + "\r\n";
+            headersOnly.insert(headerEnd, newClHeader);
+
+            // Stitch the updated header blocks back directly to our decrypted flat text body payload
+            rawRequest = headersOnly + decodeResult.second;
+        }
+
+        // 5. Feed the normalized data bundle straight through to your routing pipeline
         try {
             HttpRequest req = RequestParser::parse(rawRequest);
             HttpResponse res = StaticFileServer::serveFile(req, config, redirects);
@@ -141,10 +183,10 @@ private:
             HttpResponse errRes(400, "Bad Request");
             errRes.setHeader("Content-Type", "text/html");
             errRes.setBody(ErrorPageFactory::getErrorPage(400));
-            std::string serializedOutput = errRes.toString();
-            write(clientFd, serializedOutput.c_str(), serializedOutput.length());
+            write(clientFd, errRes.toString().c_str(), errRes.toString().length());
         }
 
         close(clientFd);
     }
+
 };
