@@ -120,10 +120,17 @@ public:
 
             // Success response detailing the isolated data parts
             HttpResponse uploadSuccessRes(201, "Created");
+            // Calculate the public URL path for the location header (e.g., /images/cool_picture.png)
+            std::string publicUrlPath = normalized;
+            if (publicUrlPath.back() != '/') {
+                publicUrlPath += "/";
+            }
+            publicUrlPath += uploadedFile.filename;
+            uploadSuccessRes.setHeader("Location", publicUrlPath); 
+            uploadSuccessRes.setBody("Successfully Uploaded File!\n"
+                                    "Saved to: " + targetFilePath + "\n"
+                                    "Size: " + std::to_string(uploadedFile.content.length()) + " bytes\n");
             uploadSuccessRes.setHeader("Content-Type", "text/plain");
-            uploadSuccessRes.setBody("Successfully Parsed Upload!\n"
-                             "Filename: " + uploadedFile.filename + "\n"
-                             "Size: " + std::to_string(uploadedFile.content.length()) + " bytes\n");
             return uploadSuccessRes;
         }
 
