@@ -171,10 +171,7 @@ public:
                 return errorRes;
             }
 
-            HttpResponse validationSuccess(200, "OK");
-            validationSuccess.setHeader("Content-Type", "text/plain");
-            validationSuccess.setBody("Path safely verified! File exists and traversal checks passed.\n"
-                                "Target to delete: " + fullPath + "\n");
+            HttpResponse validationSuccess(204, "No Content");
             return validationSuccess;
         }
         else if (req.method != "GET") {
