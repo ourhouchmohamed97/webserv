@@ -58,6 +58,7 @@ public:
             return errorRes;
         }
 
+        // ROUTE METHOD HANDLING BRANCHES
         if (req.method == "POST") {
             auto it = req.headers.find("Content-Length");
             if (it == req.headers.end()) {
@@ -132,6 +133,55 @@ public:
                                     "Size: " + std::to_string(uploadedFile.content.length()) + " bytes\n");
             uploadSuccessRes.setHeader("Content-Type", "text/plain");
             return uploadSuccessRes;
+        }
+        else if (req.method == "DELETE") {
+            std::string relativePath = normalized.substr(matchedPrefix.length());
+            std::string fullPath = matchedRoute.root;
+            if (!relativePath.empty() && relativePath.front() != '/' && fullPath.back() != '/') {
+                fullPath += "/";
+            }
+            fullPath += relativePath;
+
+            if (fullPath.find(matchedRoute.root) != 0) {
+                HttpResponse errorRes(403, "Forbidden");
+                errorRes.setHeader("Content-Type", "text/html");
+                errorRes.setBody(ErrorPageFactory::getErrorPage(403));
+                return errorRes;
+            }
+
+            struct stat s;
+            if (stat(fullPath.c_str(), &s) != 0) {
+                HttpResponse errorRes(404, "Not Found");
+                errorRes.setHeader("Content-Type", "text/html");
+                errorRes.setBody(ErrorPageFactory::getErrorPage(404));
+                return errorRes;
+            }
+
+            if (s.st_mode & S_IFDIR) {
+                HttpResponse errorRes(403, "Forbidden (Cannot Delete Directories)");
+                errorRes.setHeader("Content-Type", "text/html");
+                errorRes.setBody(ErrorPageFactory::getErrorPage(403));
+                return errorRes;
+            }
+
+            if (unlink(fullPath.c_str()) != 0) {
+                HttpResponse errorRes(500, "Internal Server Error");
+                errorRes.setHeader("Content-Type", "text/html");
+                errorRes.setBody(ErrorPageFactory::getErrorPage(500));
+                return errorRes;
+            }
+
+            HttpResponse validationSuccess(200, "OK");
+            validationSuccess.setHeader("Content-Type", "text/plain");
+            validationSuccess.setBody("Path safely verified! File exists and traversal checks passed.\n"
+                                "Target to delete: " + fullPath + "\n");
+            return validationSuccess;
+        }
+        else if (req.method != "GET") {
+            HttpResponse errorRes(405, "Method Not Allowed");
+            errorRes.setHeader("Content-Type", "text/html");
+            errorRes.setBody(ErrorPageFactory::getErrorPage(405));
+            return errorRes;
         }
 
         // 4. Translate URL path to local physical path
