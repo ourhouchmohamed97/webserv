@@ -14,4 +14,6 @@ public:
     std::string readFile() const;
     std::vector<Token> tokenize(const std::string& content);
     std::vector<ServerConfig> parse(const std::vector<Token>& tokens);
+    bool isNumber(const std::string& str) const;
 };
+

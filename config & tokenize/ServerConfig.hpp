@@ -18,6 +18,8 @@ class ServerConfig{
         ~ServerConfig();
         int     getPort() const;
         void    setPort(int port);
+        std::string getRoot() const;
+        void        setRoot(const std::string& root);
         void addLocation(const LocationConfig& loc);
         std::vector<LocationConfig> getLocations() const;
         std::string getIndex() const;

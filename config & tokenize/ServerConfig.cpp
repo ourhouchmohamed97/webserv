@@ -11,15 +11,22 @@ int ServerConfig::getPort() const{
 void ServerConfig::setPort(int port){
     _port = port;
 }
-std::vector<LocationConfig> ServerConfig::getLocations() const{
-    return _locations;
+
+std::string ServerConfig::getRoot() const{
+    return _root;
 }
-void ServerConfig::addLocation(const LocationConfig& loc){
-    _locations.push_back(loc);
+void ServerConfig::setRoot(const    std::string& root){
+    _root = root;
 }
 std::string ServerConfig::getIndex() const {
     return _index;
 }
 void ServerConfig::setIndex(const std::string& index){
     _index = index;
+}
+std::vector<LocationConfig> ServerConfig::getLocations() const{
+    return _locations;
+}
+void ServerConfig::addLocation(const LocationConfig& loc){
+    _locations.push_back(loc);
 }

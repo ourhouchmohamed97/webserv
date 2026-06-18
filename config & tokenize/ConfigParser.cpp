@@ -52,57 +52,131 @@ std::vector<Token> ConfigParser::tokenize(const std::string& content){
         }
         else
             word += c;
-        if (!word.empty())
-            tokens.push_back(Token(WORD, word));
     }
+    if (!word.empty())
+        tokens.push_back(Token(WORD, word));
     return (tokens);
 }
 
-std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens){
+std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
+{
     std::vector<ServerConfig> servers;
-    size_t  i = 0;
-    while (i < tokens.size()){
-        if (tokens[i].value == "server"){
-            i++;
-            ServerConfig server;
-            if (i < tokens.size() && tokens[i].value == "{")
+    size_t i = 0;
+
+    while (i < tokens.size())
+    {
+        if (tokens[i].value != "server")
+            throw std::runtime_error("expected 'server' keyword");
+        i++;
+        if (i >= tokens.size() || tokens[i].value != "{")
+            throw std::runtime_error("expected '{' after server");
+        i++;
+        ServerConfig server;
+        while (i < tokens.size() && tokens[i].value != "}")
+        {
+            if (tokens[i].value == "listen")
+            {
                 i++;
-            while (i < tokens.size() && tokens[i].value != "}"){
-                if (tokens[i].value == "listen"){
-                    i++;
-                    if (i < tokens.size()){
-                        int port = std::atoi(tokens[i].value.c_str());
-                        server.setPort(port);
-                    }
-                }
-                else if (tokens[i].value == "location"){
-                    i++;
-                    std::string path = tokens[i].value;
-                    i++;
-                    LocationConfig loc;
-                    loc.setPath(path);
-                    if (i < tokens.size() && tokens[i].value == "{")
-                        i++;
-                    while (i < tokens.size() && tokens[i].value != "}"){
-                        if (tokens[i].value == "root"){
-                            i++;
-                            if (i < tokens.size())
-                                loc.setRoot(tokens[i].value);
-                        }
-                        else if (tokens[i].value == "index"){
-                            i++;
-                            if (i < tokens.size())
-                            loc.setIndex(tokens[i].value);
-                        }
-                        i++;
-                    }
-                    server.addLocation(loc);
-                }
+                if (i >= tokens.size())
+                    throw std::runtime_error("listen: missing port value");
+                if (!isNumber(tokens[i].value))
+                    throw std::runtime_error("listen: invalid port");
+                int port = std::atoi(tokens[i].value.c_str());
+                if (port < 1 || port > 65535)
+                    throw std::runtime_error("listen: port out of range");
+                server.setPort(port);
+                i++;
+                if (i >= tokens.size() || tokens[i].value != ";")
+                    throw std::runtime_error("missing ';' after listen");
                 i++;
             }
-            servers.push_back(server);
+            else if (tokens[i].value == "root")
+            {
+                i++;
+                if (i >= tokens.size())
+                    throw std::runtime_error("root: missing value");
+                server.setRoot(tokens[i].value);
+                i++;
+
+                if (i >= tokens.size() || tokens[i].value != ";")
+                    throw std::runtime_error("missing ';' after root");
+                i++;
+            }
+            else if (tokens[i].value == "index")
+            {
+                i++;
+                if (i >= tokens.size())
+                    throw std::runtime_error("index: missing value");
+                server.setIndex(tokens[i].value);
+                i++;
+                if (i >= tokens.size() || tokens[i].value != ";")
+                    throw std::runtime_error("missing ';' after index");
+                i++;
+            }
+            else if (tokens[i].value == "location")
+            {
+                i++;
+                if (i >= tokens.size())
+                    throw std::runtime_error("location: missing path");
+                std::string path = tokens[i].value;
+                i++;
+                if (i >= tokens.size() || tokens[i].value != "{")
+                    throw std::runtime_error("expected '{' after location path");
+                i++;
+                LocationConfig loc;
+                loc.setPath(path);
+                while (i < tokens.size() && tokens[i].value != "}")
+                {
+                    if (tokens[i].value == "root")
+                    {
+                        i++;
+                        if (i >= tokens.size())
+                            throw std::runtime_error("location root: missing value");
+
+                        loc.setRoot(tokens[i].value);
+                        i++;
+
+                        if (i >= tokens.size() || tokens[i].value != ";")
+                            throw std::runtime_error("missing ';' after location root");
+                        i++;
+                    }
+                    else if (tokens[i].value == "index")
+                    {
+                        i++;
+                        if (i >= tokens.size())
+                            throw std::runtime_error("location index: missing value");
+
+                        loc.setIndex(tokens[i].value);
+                        i++;
+                        if (i >= tokens.size() || tokens[i].value != ";")
+                            throw std::runtime_error("missing ';' after location index");
+                        i++;
+                    }
+                    else
+                        throw std::runtime_error("unknown directive in location block: " + tokens[i].value);
+                }
+                if (i >= tokens.size())
+                    throw std::runtime_error("unclosed location block (missing '}')");
+                i++;
+                server.addLocation(loc);
+            }
+            else
+                throw std::runtime_error("unknown directive in server block: " + tokens[i].value);
         }
+        if (i >= tokens.size())
+            throw std::runtime_error("unclosed server block (missing '}')");
         i++;
+        servers.push_back(server);
     }
     return servers;
+}
+
+bool ConfigParser::isNumber(const std::string& str) const{
+    if (str.empty())
+        return false;
+    for (size_t i = 0; i < str.size(); i++){
+        if (!std::isdigit(str[i]))
+            return false;
+    }
+    return true;
 }
