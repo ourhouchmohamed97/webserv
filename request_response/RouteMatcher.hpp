@@ -2,6 +2,7 @@
 
 #include "Config.hpp"
 #include <string>
+#include <map>
 
 class RouteMatcher {
 public:
@@ -9,7 +10,10 @@ public:
         std::string bestMatch = "";
         size_t longestMatchLength = 0;
 
-        for (const auto& [routePrefix, routeOpts] : config.routes) {
+        std::map<std::string, RouteConfig>::const_iterator it;
+        for (it = config.routes.begin(); it != config.routes.end(); ++it) {
+            std::string routePrefix = it->first;
+            
             if (requestPath.rfind(routePrefix, 0) == 0) {
                 if (routePrefix.length() > longestMatchLength) {
                     longestMatchLength = routePrefix.length();

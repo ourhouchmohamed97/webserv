@@ -4,12 +4,13 @@
 #include <string>
 #include <sstream>
 #include <stdexcept>
+#include <map>
 
 class RequestParser {
 private:
     static std::string trim(std::string str) {
-        if (!str.empty() && str.back() == '\r') {
-            str.pop_back();
+        if (!str.empty() && str.at(str.size() - 1) == '\r') {
+            str.resize(str.size() - 1);
         }
         size_t first = str.find_first_not_of(" ");
         if (first == std::string::npos) return "";
@@ -42,11 +43,16 @@ public:
         }
 
         if (req.method == "POST") {
-            auto it = req.headers.find("Content-Length");
+            std::map<std::string, std::string>::const_iterator it = req.headers.find("Content-Length");
             if (it == req.headers.end()) {
                 throw std::runtime_error("400 Bad Request: Missing Content-Length");
             }
-            int contentLength = std::stoi(it->second);
+            
+            // C++98 compliant conversion using stringstream
+            int contentLength = 0;
+            std::stringstream lengthStream(it->second);
+            lengthStream >> contentLength;
+
             if (contentLength > 0) {
                 std::ostringstream remainder;
                 remainder << requestStream.rdbuf();

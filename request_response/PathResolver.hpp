@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <cstdio>
 
 class PathResolver {
 public:
@@ -10,7 +11,9 @@ public:
         std::string ret;
         for (size_t i = 0; i < str.length(); ++i) {
             if (str[i] == '%' && i + 2 < str.length()) {
-                int value = std::stoi(str.substr(i + 1, 2), nullptr, 16);
+                int value = 0;
+                // Safe C++98 parsing without std::stoi
+                std::sscanf(str.substr(i + 1, 2).c_str(), "%x", &value);
                 ret += static_cast<char>(value);
                 i += 2;
             } else {
@@ -33,10 +36,12 @@ public:
             }
         }
         std::string result = "/";
-        for (const auto& p : parts)
-            result += p + "/";
-        if (result.length() > 1)
-            result.pop_back();
+        for (size_t i = 0; i < parts.size(); ++i) {
+            result += parts[i] + "/";
+        }
+        if (result.length() > 1) {
+            result.resize(result.length() - 1);
+        }
         return result;
     }
 };

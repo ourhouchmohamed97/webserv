@@ -13,17 +13,50 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <vector>
+#include <string>
 
 class StaticFileServer {
+private:
+    // C++98 string-to-unsigned-long-long helper using streams instead of std::stoull
+    static unsigned long long cxx98_stoull(const std::string& str) {
+        std::stringstream ss(str);
+        unsigned long long val;
+        ss >> val;
+        return val;
+    }
+
+    static HttpResponse serveFileContent(const std::string& fullPath, const std::string& pathForMime) {
+        std::ifstream file(fullPath.c_str(), std::ios::in | std::ios::binary);
+        if (!file.is_open()) {
+            HttpResponse errorRes(404, "Not Found");
+            errorRes.setHeader("Content-Type", "text/html");
+            errorRes.setBody(ErrorPageFactory::getErrorPage(404));
+            return errorRes;
+        }
+        
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        file.close();
+
+        HttpResponse res(200, "OK");
+        size_t dotPos = pathForMime.find_last_of('.');
+        std::string extension = (dotPos != std::string::npos) ? pathForMime.substr(dotPos) : "";
+        
+        res.setHeader("Content-Type", MimeTypeHelper::getMimeType(extension));
+        res.setBody(buffer.str());
+        return res;
+    }
+
 public:
-    // Upgraded signature: Now accepts the entire HttpRequest object
-    static HttpResponse serveFile(const HttpRequest& req, const ServerConfig& config, const std::unordered_map<std::string, RedirectRule>& redirectConfig) {
+    static HttpResponse serveFile(const HttpRequest& req, const ServerConfig& config, const std::map<std::string, RedirectRule>& redirectConfig) {
         std::string decodedPath = PathResolver::urlDecode(req.path);
         std::string normalized = PathResolver::normalize(decodedPath);
 
-        // 1. Check redirects first
-        if (redirectConfig.count(normalized)) {
-            const RedirectRule& rule = redirectConfig.at(normalized);
+        // 1. Check redirects first (using .find() and continuous iterators)
+        std::map<std::string, RedirectRule>::const_iterator redIt = redirectConfig.find(normalized);
+        if (redIt != redirectConfig.end()) {
+            const RedirectRule& rule = redIt->second;
             HttpResponse res(rule.statusCode, (rule.statusCode == 301 ? "Moved Permanently" : "Found"));
             res.setHeader("Location", rule.location);
             return res;
@@ -38,16 +71,14 @@ public:
             return errorRes;
         }
 
-        const RouteConfig& matchedRoute = config.routes.at(matchedPrefix);
+        const RouteConfig& matchedRoute = config.routes.find(matchedPrefix)->second;
 
-        // 3. METHOD VALIDATION GUARD <-- NEW LOGIC STEP
-        // Check if the current request method is allowed on this route
-        const auto& allowed = matchedRoute.allowedMethods;
+        // 3. METHOD VALIDATION GUARD
+        const std::vector<std::string>& allowed = matchedRoute.allowedMethods;
         if (std::find(allowed.begin(), allowed.end(), req.method) == allowed.end()) {
             HttpResponse errorRes(405, "Method Not Allowed");
             errorRes.setHeader("Content-Type", "text/html");
             
-            // Build out an Allow header listing permissible endpoints (RFC standard compliance)
             std::string allowHeaderValue = "";
             for (size_t i = 0; i < allowed.size(); ++i) {
                 allowHeaderValue += allowed[i];
@@ -60,7 +91,7 @@ public:
 
         // ROUTE METHOD HANDLING BRANCHES
         if (req.method == "POST") {
-            auto it = req.headers.find("Content-Length");
+            std::map<std::string, std::string>::const_iterator it = req.headers.find("Content-Length");
             if (it == req.headers.end()) {
                 HttpResponse errorRes(411, "Length Required");
                 errorRes.setHeader("Content-Type", "text/html");
@@ -69,7 +100,7 @@ public:
             }
 
             try {
-                size_t contentLength = std::stoull(it->second);
+                unsigned long long contentLength = cxx98_stoull(it->second);
                 if (contentLength > matchedRoute.clientMaxBodySize) {
                     HttpResponse errorRes(413, "Payload Too Large");
                     errorRes.setHeader("Content-Type", "text/html");
@@ -83,7 +114,6 @@ public:
                 return errorRes;
             }
 
-            // Multipart content extraction
             UploadedFile uploadedFile = MultipartParser::parse(req);
             if (!uploadedFile.success) {
                 HttpResponse errorRes(400, "Bad Request");
@@ -92,24 +122,19 @@ public:
                 return errorRes;
             }
 
-            // Resolve target upload directory path
             std::string uploadDir = matchedRoute.root;
             if (uploadDir.empty()) {
-                uploadDir = "."; // Default fallback to current directory
+                uploadDir = ".";
             }
 
-            // Ensure the folder path has a clean trailing slash operation
-            if (uploadDir.back() != '/') {
+            if (uploadDir.at(uploadDir.size() - 1) != '/') {
                 uploadDir += '/';
             }
 
-            // Combine path root with extracted filename string
             std::string targetFilePath = uploadDir + uploadedFile.filename;
 
-            // Write binary content payload to local disk
-            std::ofstream out(targetFilePath, std::ios::out | std::ios::binary);
+            std::ofstream out(targetFilePath.c_str(), std::ios::out | std::ios::binary);
             if (!out.is_open()) {
-                // If the server fails to open/create the file
                 HttpResponse errorRes(500, "Internal Server Error");
                 errorRes.setHeader("Content-Type", "text/html");
                 errorRes.setBody(ErrorPageFactory::getErrorPage(500));
@@ -119,25 +144,26 @@ public:
             out.write(uploadedFile.content.data(), uploadedFile.content.length());
             out.close();
 
-            // Success response detailing the isolated data parts
             HttpResponse uploadSuccessRes(201, "Created");
-            // Calculate the public URL path for the location header (e.g., /images/cool_picture.png)
             std::string publicUrlPath = normalized;
-            if (publicUrlPath.back() != '/') {
+            if (publicUrlPath.at(publicUrlPath.size() - 1) != '/') {
                 publicUrlPath += "/";
             }
             publicUrlPath += uploadedFile.filename;
             uploadSuccessRes.setHeader("Location", publicUrlPath); 
+            
+            std::stringstream sizeStream;
+            sizeStream << uploadedFile.content.length();
             uploadSuccessRes.setBody("Successfully Uploaded File!\n"
                                     "Saved to: " + targetFilePath + "\n"
-                                    "Size: " + std::to_string(uploadedFile.content.length()) + " bytes\n");
+                                    "Size: " + sizeStream.str() + " bytes\n");
             uploadSuccessRes.setHeader("Content-Type", "text/plain");
             return uploadSuccessRes;
         }
         else if (req.method == "DELETE") {
             std::string relativePath = normalized.substr(matchedPrefix.length());
             std::string fullPath = matchedRoute.root;
-            if (!relativePath.empty() && relativePath.front() != '/' && fullPath.back() != '/') {
+            if (!relativePath.empty() && relativePath.at(0) != '/' && fullPath.at(fullPath.size() - 1) != '/') {
                 fullPath += "/";
             }
             fullPath += relativePath;
@@ -158,7 +184,7 @@ public:
             }
 
             if (s.st_mode & S_IFDIR) {
-                HttpResponse errorRes(403, "Forbidden (Cannot Delete Directories)");
+                HttpResponse errorRes(403, "Forbidden (Cannot DELETE Directories)");
                 errorRes.setHeader("Content-Type", "text/html");
                 errorRes.setBody(ErrorPageFactory::getErrorPage(403));
                 return errorRes;
@@ -171,8 +197,8 @@ public:
                 return errorRes;
             }
 
-            HttpResponse validationSuccess(204, "No Content");
-            return validationSuccess;
+            HttpResponse deleteSuccessRes(204, "No Content");
+            return deleteSuccessRes;
         }
         else if (req.method != "GET") {
             HttpResponse errorRes(405, "Method Not Allowed");
@@ -180,18 +206,17 @@ public:
             errorRes.setBody(ErrorPageFactory::getErrorPage(405));
             return errorRes;
         }
-
+        
         // 4. Translate URL path to local physical path
         std::string relativePath = normalized.substr(matchedPrefix.length());
         std::string fullPath = matchedRoute.root;
-        if (!relativePath.empty() && relativePath.front() != '/' && fullPath.back() != '/') {
+        if (!relativePath.empty() && relativePath.at(0) != '/' && fullPath.at(fullPath.size() - 1) != '/') {
             fullPath += "/";
         }
         fullPath += relativePath;
 
         std::string mimeLookupPath = normalized;
 
-        // 5. Security Guard: Prevent Traversal Attack
         if (fullPath.find(matchedRoute.root) != 0) {
             HttpResponse errorRes(403, "Forbidden");
             errorRes.setHeader("Content-Type", "text/html");
@@ -199,7 +224,7 @@ public:
             return errorRes;
         }
 
-        // 6. Process files and directories
+        // 5. Process files and directories
         struct stat s;
         if (stat(fullPath.c_str(), &s) != 0) {
             HttpResponse errorRes(404, "Not Found");
@@ -209,13 +234,13 @@ public:
         }
 
         if (s.st_mode & S_IFDIR) {
-            if (fullPath.back() != '/') fullPath += '/';
+            if (fullPath.at(fullPath.size() - 1) != '/') fullPath += '/';
             std::string targetIndex = matchedRoute.indexFile.empty() ? "index.html" : matchedRoute.indexFile;
             std::string indexPath = fullPath + targetIndex;
 
             if (stat(indexPath.c_str(), &s) == 0) {
                 fullPath = indexPath;
-                mimeLookupPath = (normalized.back() == '/') ? normalized + targetIndex : normalized + "/" + targetIndex;
+                mimeLookupPath = (normalized.at(normalized.size() - 1) == '/') ? normalized + targetIndex : normalized + "/" + targetIndex;
             } else if (matchedRoute.autoindex) {
                 HttpResponse res(200, "OK");
                 res.setHeader("Content-Type", "text/html");
@@ -229,37 +254,6 @@ public:
             }
         }
 
-        // 7. Read permission verification
-        if (access(fullPath.c_str(), R_OK) == -1) {
-            HttpResponse errorRes(403, "Forbidden");
-            errorRes.setHeader("Content-Type", "text/html");
-            errorRes.setBody(ErrorPageFactory::getErrorPage(403));
-            return errorRes;
-        }
-
         return serveFileContent(fullPath, mimeLookupPath);
-    }
-
-private:
-    static HttpResponse serveFileContent(const std::string& fullPath, const std::string& pathForMime) {
-        std::ifstream file(fullPath, std::ios::in | std::ios::binary);
-        if (!file.is_open()) {
-            HttpResponse errorRes(404, "Not Found");
-            errorRes.setHeader("Content-Type", "text/html");
-            errorRes.setBody(ErrorPageFactory::getErrorPage(404));
-            return errorRes;
-        }
-        
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-        file.close();
-
-        HttpResponse res(200, "OK");
-        size_t dotPos = pathForMime.find_last_of('.');
-        std::string extension = (dotPos != std::string::npos) ? pathForMime.substr(dotPos) : "";
-        
-        res.setHeader("Content-Type", MimeTypeHelper::getMimeType(extension));
-        res.setBody(buffer.str());
-        return res;
     }
 };
