@@ -1,4 +1,7 @@
 #include "Server.hpp"
+#include "request_response/RequestParser.hpp"
+#include "request_response/StaticFileServer.hpp"
+#include "request_response/Config.hpp"
 
 Server::Server(int _port): server_fd(-1), port(_port)
 {

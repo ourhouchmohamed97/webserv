@@ -1,56 +1,57 @@
 #pragma once
 
 #include <string>
-#include <unordered_map>
-#include <iostream>
+#include <map>
 #include <sstream>
+#include <iostream>
 
 struct HttpRequest {
     std::string method;
     std::string path;
     std::string version;
-    std::unordered_map<std::string, std::string> headers;
+    std::map<std::string, std::string> headers; // Changed to std::map
     std::string body;
 
     void print() const {
-        std::cout << "=== HTTP REQUEST ===\n";
-        std::cout << "Method: " << method << "\n";
-        std::cout << "Path: " << path << "\n";
-        std::cout << "Version: " << version << "\n";
-        std::cout << "Headers:\n";
-        for (const auto &[key, value] : headers) {
-            std::cout << " [" << key << "] -> " << value << "\n";
+        std::cout << "Method: " << method << " | Path: " << path << "\n";
+        std::map<std::string, std::string>::const_iterator it;
+        for (it = headers.begin(); it != headers.end(); ++it) {
+            std::cout << "[" << it->first << "] = " << it->second << "\n";
         }
         std::cout << "Body: " << body << "\n";
         std::cout << "=========================\n";
     }
 };
 
-class HttpResponse {
-private:
-    std::string version = "HTTP/1.1";
+struct HttpResponse {
     int statusCode;
-    std::string statusMessage;
-    std::unordered_map<std::string, std::string> headers;
+    std::string statusText;
+    std::string version;
+    std::map<std::string, std::string> headers; // Changed to std::map
     std::string body;
 
-public:
-    HttpResponse(int code, std::string message) : statusCode(code), statusMessage(message) {}
+    // C++98 explicit constructor (No inline value initialization allowed)
+    HttpResponse(int code = 200, std::string text = "OK") 
+        : statusCode(code), statusText(text), version("HTTP/1.1") {}
 
-    void setHeader(const std::string &key, const std::string &value) {
+    void setHeader(const std::string& key, const std::string& value) {
         headers[key] = value;
     }
 
-    void setBody(const std::string &b) {
-        body = b;
-        setHeader("Content-Length", std::to_string(body.length()));
+    void setBody(const std::string& newBody) {
+        body = newBody;
+        std::stringstream ss;
+        ss << body.length();
+        setHeader("Content-Length", ss.str()); // Replaced to_string
     }
 
     std::string toString() const {
         std::stringstream ss;
-        ss << version << " " << statusCode << " " << statusMessage << "\r\n";
-        for (const auto &[key, value] : headers) {
-            ss << key << ": " << value << "\r\n";
+        ss << version << " " << statusCode << " " << statusText << "\r\n";
+        
+        std::map<std::string, std::string>::const_iterator it;
+        for (it = headers.begin(); it != headers.end(); ++it) {
+            ss << it->first << ": " << it->second << "\r\n";
         }
         ss << "\r\n" << body;
         return ss.str();

@@ -1,0 +1,1 @@
+Hello, this is a C++98 isolated string parsing test text file!
