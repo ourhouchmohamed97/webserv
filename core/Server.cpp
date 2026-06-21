@@ -3,9 +3,10 @@
 #include "request_response/StaticFileServer.hpp"
 #include "request_response/Config.hpp"
 
-Server::Server(int _port): server_fd(-1), port(_port)
+Server::Server(std::vector<int> _port): ports(_port)
 {
-    setupSocket();
+    for(size_t i = 0; i < ports.size(); i++)
+        setupSocket(ports[i]);
 }
 
 Server::~Server()
@@ -15,14 +16,14 @@ Server::~Server()
     
 }
 
-void  Server::setupSocket()
+void  Server::setupSocket(int port)
 {
-    server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_fd < 0)
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0)
         throw::std::runtime_error("Socket failed");
     
     int opt = 1;
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
         throw::std::runtime_error("SetSockopt failed");
     
     struct sockaddr_in addr = {};
@@ -30,23 +31,33 @@ void  Server::setupSocket()
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;
     
-    if (bind(server_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
         throw::std::runtime_error("Bind failed");
-    if (listen(server_fd, 10) < 0)
+    if (listen(fd, 10) < 0)
         throw::std::runtime_error("Listen failed");
     
-    if (fcntl(server_fd, F_SETFL, O_NONBLOCK))
+    if (fcntl(fd, F_SETFL, O_NONBLOCK))
         throw::std::runtime_error("fcntl F_SETFL failed");
 
-    struct pollfd p_serv;
-    p_serv.fd = server_fd;
-    p_serv.events = POLLIN;
-    p_serv.revents = 0;
-    fds.push_back(p_serv);
+    struct pollfd pfd;
+    pfd.fd = fd;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
+    fds.push_back(pfd);
+    server_fd.push_back(fd);
 
     std::cout << "Server start listen on port " << port << std::endl;
 }
 
+bool Server::is_serverFd(int fd)
+{
+    for (size_t i = 0; i < server_fd.size(); i++)
+    {
+        if (server_fd[i] == fd)
+            return true;
+    }
+    return false;
+}
 
 void    Server::closeClient(size_t i)
 {
@@ -56,11 +67,11 @@ void    Server::closeClient(size_t i)
     fds.erase(fds.begin() + i);
 }
 
-void Server::acceptClient()
+void Server::acceptClient(int serverfd)
 {
     while (true)
     {
-        int client_fd = accept(server_fd, NULL, NULL);
+        int client_fd = accept(serverfd, NULL, NULL);
         if (client_fd < 0)
             return ;
 
@@ -158,7 +169,7 @@ void    Server::run()
                 continue;
             if (fds[i].revents & POLLHUP)
             {
-                if (fds[i].fd != server_fd)
+                if (!is_serverFd(fds[i].fd))
                 {
                     closeClient(i);
                     i--;
@@ -166,10 +177,10 @@ void    Server::run()
                 continue;
             }
 
-            if (fds[i].fd == server_fd)
+            if (is_serverFd(fds[i].fd))
             {
                 if (fds[i].revents & POLLIN)
-                    acceptClient();
+                    acceptClient(fds[i].fd);
             }
             else
             {
