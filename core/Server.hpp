@@ -14,22 +14,24 @@
 class Server
 {
     private:
-        int server_fd;
-        int port;
+        std::vector<int> server_fd;
+        std::vector<int> ports;
+
 
         std::vector<pollfd>     fds;
         std::map<int, Client>   clients;
 
-        void    setupSocket();
-        void    acceptClient();
+        void    setupSocket(int port);
+        void    acceptClient(int serverfd);
         void    readFromClient(size_t i);
         void    writeToClient(size_t i);
         void    closeClient(size_t i);
-
+        
+        bool    is_serverFd(int fd);
         bool    isReqComplete(const std::string &req);
     public:
 
-    Server(int _port);
+    Server(std::vector<int> _port);
     ~Server();
     void    run();
 };
