@@ -1,0 +1,8 @@
+# System files
+.DS_Store
+
+# Executable files
+webserv
+
+# VS Code Configuration
+.vscode/

@@ -19,7 +19,7 @@ int main() {
     imageRoute.root = "./www/global_images";
     imageRoute.autoindex = true; 
     imageRoute.indexFile = "index.html";
-    imageRoute.allowedMethods = {"GET", "POST"}; // <-- ALLOWED METHODS LISTED
+    imageRoute.allowedMethods = {"GET", "POST", "DELETE"}; // <-- ALLOWED METHODS LISTED
     imageRoute.clientMaxBodySize = 10485760; // Strict upload limit: 10 MB!
     config.addRoute("/images", imageRoute);
 
