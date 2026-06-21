@@ -1,0 +1,181 @@
+#include "Server.hpp"
+
+Server::Server(int _port): server_fd(-1), port(_port)
+{
+    setupSocket();
+}
+
+Server::~Server()
+{
+    for (size_t i = 0; i < fds.size(); i++)
+        close(fds[i].fd);
+    
+}
+
+void  Server::setupSocket()
+{
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd < 0)
+        throw::std::runtime_error("Socket failed");
+    
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
+        throw::std::runtime_error("SetSockopt failed");
+    
+    struct sockaddr_in addr = {};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = INADDR_ANY;
+    
+    if (bind(server_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+        throw::std::runtime_error("Bind failed");
+    if (listen(server_fd, 10) < 0)
+        throw::std::runtime_error("Listen failed");
+    
+    if (fcntl(server_fd, F_SETFL, O_NONBLOCK))
+        throw::std::runtime_error("fcntl F_SETFL failed");
+
+    struct pollfd p_serv;
+    p_serv.fd = server_fd;
+    p_serv.events = POLLIN;
+    p_serv.revents = 0;
+    fds.push_back(p_serv);
+
+    std::cout << "Server start listen on port " << port << std::endl;
+}
+
+
+void    Server::closeClient(size_t i)
+{
+    std::cout << "Client Closed: " << fds[i].fd << std::endl;
+    close(fds[i].fd);
+    clients.erase(fds[i].fd);
+    fds.erase(fds.begin() + i);
+}
+
+void Server::acceptClient()
+{
+    while (true)
+    {
+        int client_fd = accept(server_fd, NULL, NULL);
+        if (client_fd < 0)
+            return ;
+
+        if (fcntl(client_fd, F_SETFL, O_NONBLOCK))
+            throw::std::runtime_error("fcntl of client failed");
+
+        pollfd client_poll;
+        client_poll.fd = client_fd;
+        client_poll.events = POLLIN;
+        client_poll.revents = 0;
+
+        fds.push_back(client_poll);
+        clients.insert(std::make_pair(client_fd, Client(client_fd)));
+        std::cout << "New client: " << client_fd << std::endl;
+    }
+
+}
+
+
+bool    Server::isReqComplete(const std::string &req)
+{
+    return req.find("\r\n\r\n") != std::string::npos;
+}
+
+
+void    Server::readFromClient(size_t i)
+{
+    int fd  = fds[i].fd;
+    char buffer[4100];
+
+    ssize_t bytes = recv(fd, buffer, sizeof(buffer), 0);
+
+    if (bytes == 0 || bytes == -1)
+    {
+        closeClient(i);
+        return;
+    }
+
+    Client &cli =  clients.find(fd)->second;
+    cli.requestBuffer.append(buffer, bytes);
+
+    if (!isReqComplete(cli.requestBuffer))
+        return;
+    Request req;
+    req.parse(cli.requestBuffer);
+
+    // ------------------------ print ----------------------///
+    // std::cout << "Method: " << req.method << std::endl;
+    // std::cout << "Path: " << req.path << std::endl;
+    // std::cout << "Version: " << req.version << std::endl;
+    
+    // for(std::map<std::string, std::string>::iterator it = req.headers.begin() ;it != req.headers.end(); it++)
+    // {
+    //     std::cout << "[" << it->first << "]" << " = [" << it->second << "]\n" ;
+    // }
+    
+    // ------------------------ print ----------------------///
+    /// this part from anotehr
+    cli.responseBuffer = "HTTP/1.1 200 OK\r\n"
+                            "Content-Type: text/html\r\n"
+                            "Content-Length: 38\r\n"
+                            "Connection: close\r\n"
+                            "\r\n"
+                            "<h1>Welcome Abdelkabir El Majdoub</h1>";
+    /////
+    cli.state = WRITING;
+    fds[i].events = POLLOUT;
+}
+
+void    Server::writeToClient(size_t i)
+{
+    int fd = fds[i].fd;
+    Client &cli = clients.find(fd)->second;
+
+    ssize_t bytes_sent = send(fd, cli.responseBuffer.c_str(), cli.responseBuffer.size(), 0);
+    if (bytes_sent == -1)
+    {
+        closeClient(i);
+        return;
+    }
+    cli.responseBuffer.erase(0, bytes_sent);
+    if (cli.responseBuffer.empty())
+        closeClient(i);
+}
+
+void    Server::run()
+{
+    while (true)
+    {
+        if(poll(&fds[0], fds.size(), -1) < 0)
+            throw::std::runtime_error("poll failed");
+        for (size_t i = 0; i < fds.size(); i++)
+        {
+            if (fds[i].revents == 0)
+                continue;
+            if (fds[i].revents & POLLHUP)
+            {
+                if (fds[i].fd != server_fd)
+                {
+                    closeClient(i);
+                    i--;
+                }
+                continue;
+            }
+
+            if (fds[i].fd == server_fd)
+            {
+                if (fds[i].revents & POLLIN)
+                    acceptClient();
+            }
+            else
+            {
+                if (fds[i].revents & POLLIN)
+                    readFromClient(i);
+                else if (fds[i].revents & POLLOUT)
+                    writeToClient(i);
+            }
+        }
+    }
+    
+}
