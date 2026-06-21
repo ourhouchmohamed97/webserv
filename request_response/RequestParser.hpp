@@ -24,15 +24,19 @@ public:
         std::stringstream requestStream(rawRequest);
         std::string line;
 
+        // 1. Parse Request Line
         if (std::getline(requestStream, line)) {
             line = trim(line);
             std::stringstream lineStream(line);
             lineStream >> req.method >> req.path >> req.version;
         }
 
+        // 2. Parse Headers
         while (std::getline(requestStream, line)) {
             line = trim(line);
-            if (line.empty()) break;
+            if (line.empty()) {
+                break; // End of header block
+            }
 
             size_t colonPos = line.find(':');
             if (colonPos != std::string::npos) {
@@ -42,25 +46,37 @@ public:
             }
         }
 
+        // 3. Extract Body reliably by matching the delimiter string directly
         if (req.method == "POST") {
             std::map<std::string, std::string>::const_iterator it = req.headers.find("Content-Length");
             if (it == req.headers.end()) {
                 throw std::runtime_error("400 Bad Request: Missing Content-Length");
             }
             
-            // C++98 compliant conversion using stringstream
             int contentLength = 0;
             std::stringstream lengthStream(it->second);
             lengthStream >> contentLength;
 
             if (contentLength > 0) {
-                std::ostringstream remainder;
-                remainder << requestStream.rdbuf();
-                std::string remainingContent = remainder.str();
-
-                if (remainingContent.length() >= static_cast<size_t>(contentLength)) {
-                    req.body = remainingContent.substr(0, contentLength);
+                // Find where the header block officially ends in the raw string
+                size_t bodyStart = rawRequest.find("\r\n\r\n");
+                if (bodyStart != std::string::npos) {
+                    bodyStart += 4; // Advance past the 4 delimiter bytes
                 } else {
+                    // Fall back to alternate header break representation if needed
+                    bodyStart = rawRequest.find("\n\n");
+                    if (bodyStart != std::string::npos) {
+                        bodyStart += 2;
+                    }
+                }
+
+                // If a valid start position is found, capture the raw bytes
+                if (bodyStart != std::string::npos && bodyStart < rawRequest.length()) {
+                    req.body = rawRequest.substr(bodyStart, contentLength);
+                }
+                
+                // Final confirmation step
+                if (req.body.length() < static_cast<size_t>(contentLength)) {
                     throw std::runtime_error("400 Bad Request: Body size mismatch.");
                 }
             }
