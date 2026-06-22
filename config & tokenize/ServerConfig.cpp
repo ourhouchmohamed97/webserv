@@ -1,15 +1,14 @@
 #include "ServerConfig.hpp"
 
 ServerConfig::ServerConfig(){
-    _port = 80;
     _clientMaxBodySize = 1000000;
 }
 ServerConfig::~ServerConfig(){}
-int ServerConfig::getPort() const{
-    return _port;
+const std::vector<int>& ServerConfig::getPorts() const{
+    return _ports;
 }
-void ServerConfig::setPort(int port){
-    _port = port;
+void ServerConfig::addPort(int port){
+    _ports.push_back(port);
 }
 
 std::string ServerConfig::getRoot() const{
