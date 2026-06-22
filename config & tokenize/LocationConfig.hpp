@@ -10,6 +10,7 @@ private:
     std::string                         _path;
     std::string                         _root;
     std::string                         _index;
+    std::string                         _uploadPath;
     std::vector<std::string>            _allowedMethods;
     bool                                _autoindex;
     std::string                         _uploadPath;
@@ -23,14 +24,15 @@ public:
     void setPath(const std::string& path);
     std::string getRoot() const;
     void setRoot(const std::string& root);
-
+    const std::string& getUploadPath() const;
+    void setUploadPath(const std::string& path);
     std::vector<std::string> getAllowedMethods() const;
     void setAllowedMethods(const std::vector<std::string>& methods);
 
     bool getAutoindex() const;
     void setAutoindex(bool autoindex);
 
-    std::string getUploadPath() const;
+    const std::string getUploadPath();
     void setUploadPath(const std::string& uploadPath);
 
     size_t getClientMaxBodySize() const;

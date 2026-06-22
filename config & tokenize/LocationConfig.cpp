@@ -3,6 +3,7 @@
 LocationConfig::LocationConfig(){
     _autoindex = false;
     _clientMaxBodySize = 1000000;
+    _uploadPath = "";
 }
 LocationConfig::~LocationConfig(){}
 
@@ -15,6 +16,12 @@ void LocationConfig::setPath(const std::string& path){
 
 std::string LocationConfig::getRoot() const{
     return (_root);
+}
+const std::string& LocationConfig::getUploadPath() const {
+    return _uploadPath;
+}
+void LocationConfig::setUploadPath(const std::string& path) {
+    _uploadPath = path;
 }
 void LocationConfig::setRoot(const std::string& root){
     _root = root;
@@ -34,7 +41,7 @@ void LocationConfig::setAutoindex(bool autoindex){
     _autoindex = autoindex;
 }
 
-std::string LocationConfig::getUploadPath() const{
+const std::string& LocationConfig::getUploadPath() const {
     return _uploadPath;
 }
 void LocationConfig::setUploadPath(const std::string& uploadPath){
