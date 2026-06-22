@@ -75,21 +75,26 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
         while (i < tokens.size() && tokens[i].value != "}")
         {
             if (tokens[i].value == "listen")
-            {
-                i++;
-                if (i >= tokens.size())
-                    throw std::runtime_error("listen: missing port value");
-                if (!isNumber(tokens[i].value))
-                    throw std::runtime_error("listen: invalid port");
-                int port = std::atoi(tokens[i].value.c_str());
-                if (port < 1 || port > 65535)
-                    throw std::runtime_error("listen: port out of range");
-                server.setPort(port);
-                i++;
-                if (i >= tokens.size() || tokens[i].value != ";")
-                    throw std::runtime_error("missing ';' after listen");
-                i++;
-            }
+{
+    i++;
+
+    if (i >= tokens.size())
+        throw std::runtime_error("listen: missing value");
+
+    while (i < tokens.size() && tokens[i].value != ";")
+    {
+        if (!isNumber(tokens[i].value))
+            throw std::runtime_error("listen: invalid port");
+        int port = std::atoi(tokens[i].value.c_str());
+        if (port < 1 || port > 65535)
+            throw std::runtime_error("listen: port out of range");
+        server.addPort(port);
+        i++;
+    }
+    if (i >= tokens.size() || tokens[i].value != ";")
+        throw std::runtime_error("listen: missing ';'");
+    i++;
+}
             else if (tokens[i].value == "root")
             {
                 i++;

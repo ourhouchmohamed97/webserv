@@ -7,7 +7,7 @@
 
 class ServerConfig{
     private:
-        int                         _port;
+        std::vector<int>            _ports;
         std::string                 _root; 
         std::string                 _index; 
         size_t                      _clientMaxBodySize;
@@ -16,8 +16,8 @@ class ServerConfig{
     public:
         ServerConfig();
         ~ServerConfig();
-        int     getPort() const;
-        void    setPort(int port);
+        void addPort(int port);
+        const std::vector<int>& getPorts() const;
         std::string getRoot() const;
         void        setRoot(const std::string& root);
         void addLocation(const LocationConfig& loc);
