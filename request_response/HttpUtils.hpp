@@ -42,7 +42,7 @@ struct HttpResponse {
         body = newBody;
         std::stringstream ss;
         ss << body.length();
-        setHeader("Content-Length", ss.str()); // Replaced to_string
+        setHeader("Content-Length", ss.str());
     }
 
     std::string toString() const {

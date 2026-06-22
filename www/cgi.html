@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CGI Interactive Terminal — Execute server-side scripts through the Webserv Gateway Interface.">
+  <title>Webserv Dashboard — CGI Terminal</title>
+  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="cgi.css">
+</head>
+<body>
+  <!-- ========== NAVBAR ========== -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <div class="nav-links" id="navLinks">
+        <a href="index.html" class="nav-link" id="nav-home">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Home
+        </a>
+        <a href="team.html" class="nav-link" id="nav-team">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Team
+        </a>
+        <a href="upload.html" class="nav-link" id="nav-upload">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload
+        </a>
+        <a href="gallery.html" class="nav-link" id="nav-gallery">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Gallery
+        </a>
+        <a href="cgi.html" class="nav-link active" id="nav-cgi">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          CGI Terminal
+        </a>
+      </div>
+      <div class="nav-avatar" id="navAvatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <button class="nav-hamburger" id="navHamburger" aria-label="Toggle navigation menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ========== MAIN CONTENT ========== -->
+  <main class="page-content">
+
+    <!-- TERMINAL HERO -->
+    <section class="terminal-hero" id="terminalHero">
+      <div class="container">
+        <div class="terminal-hero-header">
+          <div class="terminal-hero-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          </div>
+          <h1 class="font-serif">CGI Interactive Terminal</h1>
+        </div>
+        <p>Execute server-side scripts through the Webserv Gateway Interface. Test your Python, Bash, or Perl scripts in a controlled sandbox environment with real-time feedback.</p>
+      </div>
+    </section>
+
+    <!-- STATUS CARDS ROW -->
+    <section class="container" id="statusCards">
+      <div class="status-grid">
+        <div class="status-card cyan">
+          <div class="status-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="status-card-text">
+            <span class="status-card-label">Latency</span>
+            <span class="status-card-value">0.042s</span>
+          </div>
+        </div>
+        <div class="status-card green">
+          <div class="status-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div class="status-card-text">
+            <span class="status-card-label">Security</span>
+            <span class="status-card-value">SANDBOXED</span>
+          </div>
+        </div>
+        <div class="status-card purple">
+          <div class="status-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+          </div>
+          <div class="status-card-text">
+            <span class="status-card-label">Memory</span>
+            <span class="status-card-value">14.2 MB</span>
+          </div>
+        </div>
+        <div class="status-card orange">
+          <div class="status-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <div class="status-card-text">
+            <span class="status-card-label">Load Avg</span>
+            <span class="status-card-value">0.12%</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUICK SCRIPTS ROW -->
+    <section class="container" id="quickScripts">
+      <div class="quick-scripts">
+        <div class="quick-scripts-left">
+          <span class="quick-scripts-label">Quick Scripts:</span>
+          <button class="script-pill active" data-script="./hello_world.py">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            hello_world.py
+          </button>
+          <button class="script-pill" data-script="./server_info.sh">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            server_info.sh
+          </button>
+          <button class="script-pill" data-script="./db_query.py">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            db_query.py
+          </button>
+        </div>
+        <button class="clear-console-btn" id="btnClearConsole">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Clear Console
+        </button>
+      </div>
+    </section>
+
+    <!-- TERMINAL WINDOW & COMMAND INPUT -->
+    <section class="container" id="terminalArea">
+      <!-- Terminal Window -->
+      <div class="terminal-window">
+        <div class="terminal-titlebar">
+          <div class="terminal-dots">
+            <span class="terminal-dot red"></span>
+            <span class="terminal-dot yellow"></span>
+            <span class="terminal-dot green"></span>
+          </div>
+          <div class="terminal-title">Webserv Interactive Shell v1.0</div>
+          <div class="terminal-ssh">ssh://admin@local-port-8080</div>
+        </div>
+        <div class="terminal-body" id="terminalBody">
+          <div class="terminal-line">
+            <span class="terminal-timestamp">10:04:21</span>
+            <span class="terminal-text system">Webserv Kernel v1.1.0 (C++98) initializing...</span>
+          </div>
+          <div class="terminal-line">
+            <span class="terminal-timestamp">10:04:22</span>
+            <span class="terminal-text system">Mounting CGI directory: /var/www/cgi-bin/...</span>
+          </div>
+          <div class="terminal-line">
+            <span class="terminal-timestamp">10:04:22</span>
+            <span class="terminal-text system">CGI Environment Ready. Execution engine ONLINE.</span>
+          </div>
+          <div class="terminal-line">
+            <span class="terminal-timestamp">10:05:01</span>
+            <span class="terminal-text command">webserv@admin:~$ ./hello_world.py</span>
+          </div>
+          <div class="terminal-line">
+            <span class="terminal-timestamp">10:05:01</span>
+            <span class="terminal-text output">Content-type: text/html</span>
+          </div>
+          <div class="terminal-line">
+            <span class="terminal-timestamp">10:05:01</span>
+            <span class="terminal-text output"></span>
+          </div>
+          <div class="terminal-line">
+            <span class="terminal-timestamp">10:05:01</span>
+            <span class="terminal-text success">&lt;h1&gt;Hello from Webserv CGI!&lt;/h1&gt;</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Command Input -->
+      <div class="command-input">
+        <div class="command-prompt">
+          <span class="user">webserv@admin</span>
+          <span class="sep">:</span>
+          <span class="dir">~</span>
+          <span class="arrow">&gt;</span>
+        </div>
+        <input type="text" class="command-field" id="commandField" placeholder="Run hello_world.py or type a custom command..." autocomplete="off">
+        <button class="execute-btn" id="btnExecute">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Execute
+        </button>
+      </div>
+    </section>
+
+    <!-- INFO CARDS -->
+    <section class="container" id="terminalInfo">
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-card-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <h3 class="font-serif">Execution Context</h3>
+          </div>
+          <p>CGI scripts are executed in a fork-exec model within the C++98 core. The server captures standard output directly to this terminal. Environment variables such as <strong>PATH_INFO</strong>, <strong>QUERY_STRING</strong>, and <strong>REMOTE_ADDR</strong> are passed automatically.</p>
+        </div>
+        <div class="info-card">
+          <div class="info-card-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <h3 class="font-serif">Security Sandbox</h3>
+          </div>
+          <ul>
+            <li>Resource limits enforced (CPU/RAM/Timeout) to prevent script hang.</li>
+            <li>Read-only access to core server configuration files.</li>
+            <li>Script execution runs under isolated <strong>webserv_cgi</strong> user.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="footer" id="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="footer-logo">
+            <div class="footer-logo-icon">W</div>
+            <span class="footer-logo-text">Webserv Dashboard</span>
+          </a>
+          <p class="footer-desc">A high-performance HTTP/1.1 implementation in C++98. Built for speed, reliability, and modern web standards.</p>
+        </div>
+        <div class="footer-column">
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="#"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> API Documentation</a></li>
+            <li><a href="#"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> RFC 2616 Spec</a></li>
+            <li><a href="#"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> CGI Guidelines</a></li>
+          </ul>
+        </div>
+        <div class="footer-column">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="index.html">Dashboard</a></li>
+            <li><a href="team.html">The Team</a></li>
+            <li><a href="gallery.html">Media Gallery</a></li>
+          </ul>
+        </div>
+        <div class="footer-column">
+          <h4>Connect</h4>
+          <div class="footer-social">
+            <a href="#" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg></a>
+            <a href="#" aria-label="Twitter"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg></a>
+            <a href="#" aria-label="Info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2024 Webserv Dashboard. Built with C++98 and futuristic vibes.</span>
+        <span>v1.1.0-stable</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>

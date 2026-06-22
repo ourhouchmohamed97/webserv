@@ -1,7 +1,7 @@
 #pragma once
 
-#include "config & tokenize/ServerConfig.hpp"
-#include "config & tokenize/LocationConfig.hpp"
+#include "../config_cgi/ServerConfig.hpp"
+#include "../config_cgi/LocationConfig.hpp"
 #include <string>
 #include <vector>
 
@@ -41,4 +41,4 @@ public:
 
         return bestMatch;
     }
-}
+};

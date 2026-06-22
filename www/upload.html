@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Secure Upload Protocol — Interface directly with the C++98 server implementation. Test POST method robustness with chunked transfers.">
+  <title>Webserv Dashboard — Upload</title>
+  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="upload.css">
+</head>
+<body>
+  <!-- ========== NAVBAR ========== -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <div class="nav-links" id="navLinks">
+        <a href="index.html" class="nav-link" id="nav-home">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Home
+        </a>
+        <a href="team.html" class="nav-link" id="nav-team">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Team
+        </a>
+        <a href="upload.html" class="nav-link active" id="nav-upload">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload
+        </a>
+        <a href="gallery.html" class="nav-link" id="nav-gallery">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Gallery
+        </a>
+        <a href="cgi.html" class="nav-link" id="nav-cgi">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          CGI Terminal
+        </a>
+      </div>
+      <div class="nav-avatar" id="navAvatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <button class="nav-hamburger" id="navHamburger" aria-label="Toggle navigation menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ========== MAIN CONTENT ========== -->
+  <main class="page-content">
+
+    <!-- UPLOAD HERO -->
+    <section class="upload-hero" id="uploadHero">
+      <div class="container">
+        <span class="hero-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          File Ingestion Layer
+        </span>
+        <h1 class="font-serif">Secure Upload Protocol</h1>
+        <p>Interface directly with our C++98 server implementation. Test the <strong>POST</strong> method robustness with chunked transfers and real-time monitoring.</p>
+      </div>
+    </section>
+
+    <!-- UPLOAD AREA -->
+    <section class="upload-section" id="uploadSection">
+      <div class="container">
+        <div class="upload-grid">
+          <!-- Drop Zone -->
+          <div class="upload-dropzone" id="uploadDropzone">
+            <span class="corner corner-tl"></span>
+            <span class="corner corner-tr"></span>
+            <span class="corner corner-bl"></span>
+            <span class="corner corner-br"></span>
+            <div class="upload-dropzone-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <h3 class="font-serif">Push to Server</h3>
+            <p>Drag and drop files here to execute a <strong>POST</strong> request to the C++98 backend.</p>
+            <div class="upload-dropzone-actions">
+              <button class="btn btn-primary btn-sm" id="btnSelectFiles">Select Files</button>
+              <button class="btn btn-ghost btn-sm" id="btnBrowseUri">Browse URI</button>
+            </div>
+            <input type="file" id="fileInput" multiple style="display:none;">
+          </div>
+
+          <!-- Sidebar -->
+          <div class="upload-sidebar">
+            <!-- Active Stream -->
+            <div class="stream-card">
+              <div class="stream-card-header">
+                <span class="status-dot green"></span>
+                <h4>Active Stream</h4>
+              </div>
+              <div class="stream-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span>No active transmissions</span>
+              </div>
+            </div>
+
+            <!-- Security Status -->
+            <div class="security-card">
+              <div class="security-card-header">
+                <span class="status-dot green"></span>
+                <h4>Security Status</h4>
+              </div>
+              <div class="security-row">
+                <span class="security-label">Encryption</span>
+                <span class="security-value">AES-256</span>
+              </div>
+              <div class="security-row">
+                <span class="security-label">Threat Filter</span>
+                <span class="security-badge active">ACTIVE</span>
+              </div>
+              <div class="capacity-bar-wrap">
+                <div class="capacity-bar-header">
+                  <span class="capacity-bar-label">Server Capacity</span>
+                  <span class="capacity-bar-label" style="color: var(--text-secondary);">68%</span>
+                </div>
+                <div class="capacity-bar">
+                  <div class="capacity-bar-fill" style="width: 68%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOSTED ARTIFACTS -->
+    <section class="artifacts-section" id="artifactsSection">
+      <div class="container">
+        <div class="artifacts-header">
+          <h2 class="font-serif">Hosted Artifacts</h2>
+          <div class="artifacts-header-actions">
+            <a href="#">Export Manifest</a>
+            <a href="#" class="danger">Purge Storage</a>
+          </div>
+        </div>
+
+        <div class="file-table-wrap">
+          <div class="file-table-header">
+            <div class="file-table-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <h4>Server Filesystem</h4>
+              <span>Managed via DELETE and GET</span>
+            </div>
+            <span class="file-count">5 Total Objects</span>
+          </div>
+
+          <table class="file-table" id="fileTable">
+            <thead>
+              <tr>
+                <th>File Name</th>
+                <th>Format</th>
+                <th>Size</th>
+                <th>Modified</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="file-name-cell">
+                    <div class="file-icon conf">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    </div>
+                    config_nginx.conf
+                  </div>
+                </td>
+                <td><span class="format-badge conf">CONF</span></td>
+                <td class="file-size">2.4 KB</td>
+                <td class="file-date">2024-05-12 14:20</td>
+                <td>
+                  <button class="file-delete-btn" aria-label="Delete file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="file-name-cell">
+                    <div class="file-icon image">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    </div>
+                    hero_background.webp
+                  </div>
+                </td>
+                <td><span class="format-badge image">IMAGE</span></td>
+                <td class="file-size">1.2 MB</td>
+                <td class="file-date">2024-05-11 09:45</td>
+                <td>
+                  <button class="file-delete-btn" aria-label="Delete file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="file-name-cell">
+                    <div class="file-icon cgi">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                    </div>
+                    main_script.cgi
+                  </div>
+                </td>
+                <td><span class="format-badge cgi">CGI</span></td>
+                <td class="file-size">12.8 KB</td>
+                <td class="file-date">2024-05-10 18:30</td>
+                <td>
+                  <button class="file-delete-btn" aria-label="Delete file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="file-name-cell">
+                    <div class="file-icon pdf">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    </div>
+                    server_specs.pdf
+                  </div>
+                </td>
+                <td><span class="format-badge pdf">PDF</span></td>
+                <td class="file-size">4.1 MB</td>
+                <td class="file-date">2024-05-08 11:17</td>
+                <td>
+                  <button class="file-delete-btn" aria-label="Delete file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="file-name-cell">
+                    <div class="file-icon txt">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    </div>
+                    error_log.txt
+                  </div>
+                </td>
+                <td><span class="format-badge txt">TXT</span></td>
+                <td class="file-size">156 B</td>
+                <td class="file-date">2024-05-13 01:05</td>
+                <td>
+                  <button class="file-delete-btn" aria-label="Delete file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="file-table-footer">
+            <a href="#">View full directory log</a>
+          </div>
+        </div>
+
+        <!-- Server Info Cards -->
+        <div class="server-info-grid">
+          <div class="server-info-card">
+            <div class="server-info-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div class="server-info-text">
+              <span class="server-info-label">Max File Size</span>
+              <span class="server-info-value">100 MB</span>
+            </div>
+          </div>
+          <div class="server-info-card">
+            <div class="server-info-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            </div>
+            <div class="server-info-text">
+              <span class="server-info-label">CGI Support</span>
+              <span class="server-info-value">Perl/Py/C++</span>
+            </div>
+          </div>
+          <div class="server-info-card">
+            <div class="server-info-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <div class="server-info-text">
+              <span class="server-info-label">Response Protocol</span>
+              <span class="server-info-value">HTTP/1.1</span>
+            </div>
+          </div>
+          <div class="server-info-card">
+            <div class="server-info-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="server-info-text">
+              <span class="server-info-label">Auth Level</span>
+              <span class="server-info-value">Admin Root</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="footer" id="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="footer-logo">
+            <div class="footer-logo-icon">W</div>
+            <span class="footer-logo-text">Webserv Dashboard</span>
+          </a>
+          <p class="footer-desc">A high-performance HTTP/1.1 implementation in C++98. Built for speed, reliability, and modern web standards.</p>
+        </div>
+        <div class="footer-column">
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="#"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> API Documentation</a></li>
+            <li><a href="#"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> RFC 2616 Spec</a></li>
+            <li><a href="#"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> CGI Guidelines</a></li>
+          </ul>
+        </div>
+        <div class="footer-column">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="index.html">Dashboard</a></li>
+            <li><a href="team.html">The Team</a></li>
+            <li><a href="gallery.html">Media Gallery</a></li>
+          </ul>
+        </div>
+        <div class="footer-column">
+          <h4>Connect</h4>
+          <div class="footer-social">
+            <a href="#" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg></a>
+            <a href="#" aria-label="Twitter"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg></a>
+            <a href="#" aria-label="Info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2024 Webserv Dashboard. Built with C++98 and futuristic vibes.</span>
+        <span>v1.1.0-stable</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>

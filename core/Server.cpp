@@ -1,9 +1,7 @@
 #include "Server.hpp"
-#include "request_response/RequestParser.hpp"
-#include "request_response/StaticFileServer.hpp"
-#include "request_response/Config.hpp"
 
-Server::Server(std::vector<int> _port): ports(_port)
+Server::Server(std::vector<int> _port, const std::vector<ServerConfig>& configs) 
+    : ports(_port), _configs(configs)
 {
     for(size_t i = 0; i < ports.size(); i++)
         setupSocket(ports[i]);
@@ -115,31 +113,55 @@ void    Server::readFromClient(size_t i)
 
     if (!isReqComplete(cli.requestBuffer))
         return;
-    Request req;
-    req.parse(cli.requestBuffer);
+    try {
+        // 1 Parse the buffer
+        HttpRequest req = RequestParser::parse(cli.requestBuffer);
+        cli.requestBuffer.clear(); // Safe to wipe now that we've parsed it
 
-    // ------------------------ print ----------------------///
-    // std::cout << "Method: " << req.method << std::endl;
-    // std::cout << "Path: " << req.path << std::endl;
-    // std::cout << "Version: " << req.version << std::endl;
-    
-    // for(std::map<std::string, std::string>::iterator it = req.headers.begin() ;it != req.headers.end(); it++)
-    // {
-    //     std::cout << "[" << it->first << "]" << " = [" << it->second << "]\n" ;
-    // }
-    
-    // ------------------------ print ----------------------///
-    /// this part from anotehr
-    cli.responseBuffer = "HTTP/1.1 200 OK\r\n"
-                            "Content-Type: text/html\r\n"
-                            "Content-Length: 38\r\n"
-                            "Connection: close\r\n"
-                            "\r\n"
-                            "<h1>Welcome Abdelkabir El Majdoub</h1>";
-    /////
+        // 2 Fallback to first configuration profile or determine the closest match
+        ServerConfig activeConfig;
+        if (!_configs.empty()) {
+            activeConfig = _configs[0]; // Upgrade later to select by Host header port if needed
+        }
+
+        // 3 Match rules dynamically using prefix matcher
+        LocationConfig loc = RouteMatcher::match(req.path, activeConfig);
+
+        // 4 Divert to CGI processing if configuration map rules match extensions
+        std::map<std::string, std::string> cgiMap = loc.getCgi();
+        if (!cgiMap.empty()) {
+            // Determine script path by resolving req.path against the root directory
+            std::string scriptPath = loc.getRoot() + req.path;
+            
+            // Call your teammate's CGI execution module passing your parsed data types
+            CGI cgiHandler;
+            std::string cgiOutput = cgiHandler.execute(scriptPath, req.method, req.body, req.headers);
+            
+            // Build the clean HTTP response layout from the script's raw stdout text
+            if (cgiOutput.find("HTTP/1.1") == 0 || cgiOutput.find("HTTP/1.0") == 0) {
+                cli.responseBuffer = cgiOutput;
+            } else {
+                std::stringstream ss;
+                ss << "HTTP/1.1 200 OK\r\n"
+                   << "Content-Length: " << cgiOutput.length() << "\r\n"
+                   << "Content-Type: text/html\r\n\r\n"
+                   << cgiOutput;
+                cli.responseBuffer = ss.str();
+            }
+        } else {
+            // 5. Serve native asset structures or save file upload sequences cleanly
+            HttpResponse res = StaticFileServer::serveFile(req, loc);
+            cli.responseBuffer = res.toString();
+        }
+    } catch (const std::exception& e) {
+        // Safeguard if request validation formatting issues surface
+        cli.responseBuffer = "HTTP/1.1 400 Bad Request\r\nContent-Length: 15\r\n\r\n400 Bad Request";
+    }
+
     cli.state = WRITING;
     fds[i].events = POLLOUT;
 }
+
 
 void    Server::writeToClient(size_t i)
 {

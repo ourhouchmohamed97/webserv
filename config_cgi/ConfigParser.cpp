@@ -20,7 +20,7 @@ std::string ConfigParser::readFile() const{
 std::vector<Token> ConfigParser::tokenize(const std::string& content){
     std::vector<Token> tokens;
     std::string word;
-    for (int i = 0; i < content.size(); i++){
+    for (size_t i = 0; i < content.size(); i++){
         char c = content[i];
         if (c == '{')
         {

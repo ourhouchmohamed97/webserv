@@ -1,0 +1,360 @@
+/* ============================================
+   TEAM PAGE STYLES
+   ============================================ */
+
+/* ---------- Team Hero ---------- */
+.team-hero {
+  text-align: center;
+  padding: 80px 0 60px;
+  position: relative;
+}
+
+.team-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(ellipse, rgba(124, 58, 237, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.team-hero h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 48px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.team-hero h1 span {
+  color: var(--accent-purple-light);
+}
+
+.team-hero p {
+  font-size: 15px;
+  color: var(--text-secondary);
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* ---------- Team Members Grid ---------- */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  padding: 40px 0;
+}
+
+.team-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--card-radius);
+  padding: 36px 28px;
+  text-align: center;
+  transition: all var(--transition-default);
+}
+
+.team-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+}
+
+.team-avatar-wrap {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 20px;
+}
+
+.team-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--border-default);
+  background: var(--bg-tertiary);
+}
+
+.team-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.team-avatar-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  border: 2px solid var(--bg-card);
+}
+
+.team-avatar-badge.purple {
+  background: var(--accent-purple);
+  color: white;
+}
+
+.team-avatar-badge.green {
+  background: var(--accent-green);
+  color: white;
+}
+
+.team-avatar-badge.cyan {
+  background: var(--accent-cyan);
+  color: white;
+}
+
+.team-card h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.team-role {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 4px;
+  margin-bottom: 24px;
+}
+
+.team-role.purple {
+  color: var(--accent-purple-light);
+  background: var(--accent-purple-bg);
+}
+
+.team-role.green {
+  color: var(--accent-green);
+  background: var(--accent-green-bg);
+}
+
+.team-role.cyan {
+  color: var(--accent-cyan);
+  background: var(--accent-cyan-bg);
+}
+
+.team-contributions {
+  text-align: left;
+}
+
+.team-contributions-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.team-contributions-header svg {
+  width: 14px;
+  height: 14px;
+  color: var(--accent-purple-light);
+}
+
+.team-contributions ul {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.team-contributions ul li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.team-contributions ul li::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  background: var(--accent-purple-light);
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 7px;
+}
+
+/* ---------- Commitment Section ---------- */
+.commitment {
+  padding: 60px 0;
+}
+
+.commitment-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--card-radius);
+  padding: 40px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: center;
+}
+
+.commitment-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.commitment-icon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.commitment-icon svg {
+  width: 24px;
+  height: 24px;
+  color: var(--accent-purple-light);
+}
+
+.commitment-card h2 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.commitment-card p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.commitment-stats {
+  display: flex;
+  gap: 32px;
+  justify-content: flex-end;
+}
+
+.commitment-stat {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 100px;
+}
+
+.commitment-stat-value {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--accent-purple-light);
+  font-family: 'Inter', sans-serif;
+}
+
+.commitment-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+}
+
+/* ---------- Values Grid ---------- */
+.values {
+  padding: 60px 0 80px;
+}
+
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.value-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.value-icon {
+  color: var(--accent-purple-light);
+  margin-bottom: 4px;
+}
+
+.value-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.value-card h3 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.value-card p {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+/* ============================================
+   RESPONSIVE — TEAM
+   ============================================ */
+@media (max-width: 1024px) {
+  .team-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .values-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .commitment-card {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .commitment-stats {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .team-hero h1 {
+    font-size: 36px;
+  }
+
+  .team-grid {
+    grid-template-columns: 1fr;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 20px 0;
+  }
+
+  .commitment-card {
+    padding: 28px;
+  }
+
+  .commitment-stats {
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .values-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
