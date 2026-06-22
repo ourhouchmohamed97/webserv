@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Meet the engineering team behind Webserv — the architects building an ultra-efficient C++98 HTTP/1.1 server.">
+  <title>Webserv Dashboard — The Team</title>
+  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="team.css">
+</head>
+<body>
+  <!-- ========== NAVBAR ========== -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <div class="nav-links" id="navLinks">
+        <a href="index.html" class="nav-link" id="nav-home">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Home
+        </a>
+        <a href="team.html" class="nav-link active" id="nav-team">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Team
+        </a>
+        <a href="upload.html" class="nav-link" id="nav-upload">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload
+        </a>
+        <a href="gallery.html" class="nav-link" id="nav-gallery">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Gallery
+        </a>
+        <a href="cgi.html" class="nav-link" id="nav-cgi">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          CGI Terminal
+        </a>
+      </div>
+      <div class="nav-avatar" id="navAvatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <button class="nav-hamburger" id="navHamburger" aria-label="Toggle navigation menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ========== MAIN CONTENT ========== -->
+  <main class="page-content">
+
+    <!-- TEAM HERO -->
+    <section class="team-hero" id="teamHero">
+      <div class="container">
+        <h1 class="font-serif">The Architects of <span>Webserv</span></h1>
+        <p>Meet the engineering core behind our ultra-efficient C++98 HTTP/1.1 server.<br>Built with zero external libraries and a passion for high-performance systems.</p>
+      </div>
+    </section>
+
+    <!-- TEAM MEMBERS GRID -->
+    <section class="section" id="teamGrid">
+      <div class="container">
+        <div class="team-grid">
+          <!-- Alex Thorne -->
+          <article class="team-card" id="card-alex">
+            <div class="team-avatar-wrap">
+              <div class="team-avatar">
+                <img src="assets/avatar-alex.png" alt="Alex Thorne" loading="lazy">
+              </div>
+              <div class="team-avatar-badge purple">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              </div>
+            </div>
+            <h3>Alex Thorne</h3>
+            <span class="team-role purple">Lead Systems Architect</span>
+            <div class="team-contributions">
+              <div class="team-contributions-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                Technical Contributions
+              </div>
+              <ul>
+                <li>Core I/O multiplexing logic using select() for C++98 compatibility</li>
+                <li>TCP socket management and non-blocking I/O implementation</li>
+                <li>Robust error handling and memory management architecture</li>
+              </ul>
+            </div>
+          </article>
+
+          <!-- Elena Vance -->
+          <article class="team-card" id="card-elena">
+            <div class="team-avatar-wrap">
+              <div class="team-avatar">
+                <img src="assets/avatar-elena.png" alt="Elena Vance" loading="lazy">
+              </div>
+              <div class="team-avatar-badge green">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              </div>
+            </div>
+            <h3>Elena Vance</h3>
+            <span class="team-role green">Protocol Specialist</span>
+            <div class="team-contributions">
+              <div class="team-contributions-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                Technical Contributions
+              </div>
+              <ul>
+                <li>RFC 2616 compliant HTTP request parser and response generator</li>
+                <li>Virtual host configuration and dynamic route matching engine</li>
+                <li>Implementation of Autoindex and directory listing features</li>
+              </ul>
+            </div>
+          </article>
+
+          <!-- Marcus Kross -->
+          <article class="team-card" id="card-marcus">
+            <div class="team-avatar-wrap">
+              <div class="team-avatar">
+                <img src="assets/avatar-marcus.png" alt="Marcus Kross" loading="lazy">
+              </div>
+              <div class="team-avatar-badge cyan">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+            </div>
+            <h3>Marcus Kross</h3>
+            <span class="team-role cyan">CGI & Security Lead</span>
+            <div class="team-contributions">
+              <div class="team-contributions-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                Technical Contributions
+              </div>
+              <ul>
+                <li>CGI execution engine with environment variable management</li>
+                <li>POST/DELETE method implementation and file system security</li>
+                <li>Performance optimization for static asset delivery</li>
+              </ul>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMMITMENT SECTION -->
+    <section class="commitment" id="commitment">
+      <div class="container">
+        <div class="commitment-card">
+          <div class="commitment-content">
+            <div class="commitment-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <h2 class="font-serif">Commitment to C++98</h2>
+            </div>
+            <p>Our team strictly adheres to the C++98 standard, ensuring maximum portability and stability across legacy systems while pushing the boundaries of what is possible without modern abstractions.</p>
+          </div>
+          <div class="commitment-stats">
+            <div class="commitment-stat">
+              <span class="commitment-stat-value">12K+</span>
+              <span class="commitment-stat-label">Lines of Code</span>
+            </div>
+            <div class="commitment-stat">
+              <span class="commitment-stat-value">0</span>
+              <span class="commitment-stat-label">Mem Leaks</span>
+            </div>
+            <div class="commitment-stat">
+              <span class="commitment-stat-value">100%</span>
+              <span class="commitment-stat-label">RFC Compliant</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VALUES GRID -->
+    <section class="values" id="values">
+      <div class="container">
+        <div class="values-grid">
+          <div class="value-card">
+            <div class="value-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <h3>Speed First</h3>
+            <p>Optimized event loops and non-blocking I/O ensure we handle thousands of concurrent requests with minimal overhead.</p>
+          </div>
+          <div class="value-card">
+            <div class="value-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <h3>Resource Control</h3>
+            <p>Fine-grained control over buffer sizes and connection timeouts to prevent DDoS attacks and resource exhaustion.</p>
+          </div>
+          <div class="value-card">
+            <div class="value-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <h3>Security Driven</h3>
+            <p>Strict input sanitization and jailed CGI environments to keep your host system safe from malicious traffic.</p>
+          </div>
+          <div class="value-card">
+            <div class="value-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </div>
+            <h3>Modular Core</h3>
+            <p>Designed with loose coupling to allow for easy extension of CGI scripts and custom error page handling.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="footer" id="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="footer-logo">
+            <div class="footer-logo-icon">W</div>
+            <span class="footer-logo-text">Webserv Dashboard</span>
+          </a>
+          <p class="footer-desc">A high-performance HTTP/1.1 implementation in C++98. Built for speed, reliability, and modern web standards.</p>
+        </div>
+        <div class="footer-column">
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="#"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> API Documentation</a></li>
+            <li><a href="#"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> RFC 2616 Spec</a></li>
+            <li><a href="#"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> CGI Guidelines</a></li>
+          </ul>
+        </div>
+        <div class="footer-column">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="index.html">Dashboard</a></li>
+            <li><a href="team.html">The Team</a></li>
+            <li><a href="gallery.html">Media Gallery</a></li>
+          </ul>
+        </div>
+        <div class="footer-column">
+          <h4>Connect</h4>
+          <div class="footer-social">
+            <a href="#" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg></a>
+            <a href="#" aria-label="Twitter"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg></a>
+            <a href="#" aria-label="Info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2024 Webserv Dashboard. Built with C++98 and futuristic vibes.</span>
+        <span>v1.1.0-stable</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>

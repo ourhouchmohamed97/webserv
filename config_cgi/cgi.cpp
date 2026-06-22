@@ -1,9 +1,8 @@
-#include "CGI.hpp"
-#include <unistd.h>
+#include "cgi.hpp"
 
-CGI::CGI(){}
-CGI::~CGI(){}
-std::string CGI::execute(const std::string& scriptPath,const std::string& method,const std::string& body){
+std::string CGI::execute(const std::string& scriptPath,const std::string& method,const std::string& body,
+    const std::map<std::string, std::string>& headers){
+    (void)headers;
     int inPipe[2];
     int outPipe[2];
     pipe(inPipe);
@@ -20,9 +19,11 @@ std::string CGI::execute(const std::string& scriptPath,const std::string& method
         close(inPipe[1]);
         close(outPipe[0]);
         char *argv[] = {(char*)scriptPath.c_str(), NULL};
+        std::stringstream ss;
+        ss << body.size();
         std::vector<std::string> env;
         env.push_back("REQUEST_METHOD=" + method);
-        env.push_back("CONTENT_LENGTH=" + CGI::to_string(body.size()));
+        env.push_back("CONTENT_LENGTH=" + ss.str());
         env.push_back("GATEWAY_INTERFACE=CGI/1.1");
         env.push_back("SERVER_PROTOCOL=HTTP/1.1");
         env.push_back("REDIRECT_STATUS=200");
@@ -33,7 +34,7 @@ std::string CGI::execute(const std::string& scriptPath,const std::string& method
         execve(scriptPath.c_str(), argv, envp.data());
         exit(1);
     }
-    else {
+    else{
         close(inPipe[0]);
         close(outPipe[1]);
         if (method == "POST")
