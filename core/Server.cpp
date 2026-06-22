@@ -135,60 +135,47 @@ void    Server::readFromClient(size_t i)
             // std::string scriptPath = loc.getRoot() + req.path;
             std::string relative = req.path;
 
-if (relative.find(loc.getPath()) == 0)
-    relative = relative.substr(loc.getPath().size());
+            if (relative.find(loc.getPath()) == 0)
+                relative = relative.substr(loc.getPath().size());
 
-if (!relative.empty() && relative[0] != '/')
-    relative = "/" + relative;
+            if (!relative.empty() && relative[0] != '/')
+                relative = "/" + relative;
 
-std::string scriptPath = loc.getRoot() + relative;
+            std::string scriptPath = loc.getRoot() + relative;
+
+            CGI cgiHandler;
+            std::string cgiOutput = cgiHandler.execute(scriptPath, req.method, req.body, req.headers);
+
+            size_t headerEnd = cgiOutput.find("\r\n\r\n");
+            if (headerEnd == std::string::npos)
+                headerEnd = cgiOutput.find("\n\n");
+
+            std::string cgiHeaders;
+            std::string cgiBody;
+
+            if (headerEnd != std::string::npos)
+            {
+                size_t sepLen = (cgiOutput.find("\r\n\r\n") != std::string::npos) ? 4 : 2;
+                cgiHeaders = cgiOutput.substr(0, headerEnd);
+                cgiBody = cgiOutput.substr(headerEnd + sepLen);
+            }
+            else
+            {
+                cgiHeaders = "Content-Type: text/html";
+                cgiBody = cgiOutput;
+            }
+            std::stringstream ss;
+            ss << "HTTP/1.1 200 OK\r\n"
+            << cgiHeaders << "\r\n"
+            << "Content-Length: " << cgiBody.length() << "\r\n"
+            << "\r\n"
+            << cgiBody;
+
+            cli.responseBuffer = ss.str();
+
             
-            // Call your teammate's CGI execution module passing your parsed data types
-            // CGI cgiHandler;
-            // std::string cgiOutput = cgiHandler.execute(scriptPath, req.method, req.body, req.headers);
-           
-            // // Build the clean HTTP response layout from the script's raw stdout text
-            // if (cgiOutput.find("HTTP/1.1") == 0 || cgiOutput.find("HTTP/1.0") == 0) {
-            //     cli.responseBuffer = cgiOutput;
-            // } else {
-            //     std::stringstream ss;
-            //     ss << "HTTP/1.1 200 OK\r\n"
-            //        << "Content-Length: " << cgiOutput.length() << "\r\n"
-            //        << "Content-Type: text/html\r\n\r\n"
-            //        << cgiOutput;
-            //     cli.responseBuffer = ss.str();
-            // }
-        CGI cgiHandler;
-std::string cgiOutput = cgiHandler.execute(scriptPath, req.method, req.body, req.headers);
-
-size_t headerEnd = cgiOutput.find("\r\n\r\n");
-if (headerEnd == std::string::npos)
-    headerEnd = cgiOutput.find("\n\n");
-
-std::string cgiHeaders;
-std::string cgiBody;
-
-if (headerEnd != std::string::npos)
-{
-    size_t sepLen = (cgiOutput.find("\r\n\r\n") != std::string::npos) ? 4 : 2;
-    cgiHeaders = cgiOutput.substr(0, headerEnd);
-    cgiBody = cgiOutput.substr(headerEnd + sepLen);
-}
-else
-{
-    cgiHeaders = "Content-Type: text/html";
-    cgiBody = cgiOutput;
-}
-
-std::stringstream ss;
-ss << "HTTP/1.1 200 OK\r\n"
-   << cgiHeaders << "\r\n"
-   << "Content-Length: " << cgiBody.length() << "\r\n"
-   << "\r\n"
-   << cgiBody;
-
-cli.responseBuffer = ss.str();
-        } else {
+        } 
+        else {
             // 5. Serve native asset structures or save file upload sequences cleanly
             HttpResponse res = StaticFileServer::serveFile(req, loc);
             cli.responseBuffer = res.toString();

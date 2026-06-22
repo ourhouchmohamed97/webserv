@@ -158,30 +158,30 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                         i++;
                     }
                     else if (tokens[i].value == "cgi")
-{
-    i++;
+                    {
+                        i++;
 
-    if (i >= tokens.size())
-        throw std::runtime_error("cgi: missing extension");
+                        if (i >= tokens.size())
+                            throw std::runtime_error("cgi: missing extension");
 
-    std::string ext = tokens[i].value;
-    i++;
+                        std::string ext = tokens[i].value;
+                        i++;
 
-    if (i >= tokens.size())
-        throw std::runtime_error("cgi: missing interpreter");
+                        if (i >= tokens.size())
+                            throw std::runtime_error("cgi: missing interpreter");
 
-    std::string interpreter = tokens[i].value;
-    i++;
+                        std::string interpreter = tokens[i].value;
+                        i++;
 
-    if (i >= tokens.size() || tokens[i].value != ";")
-        throw std::runtime_error("missing ';' after cgi");
+                        if (i >= tokens.size() || tokens[i].value != ";")
+                            throw std::runtime_error("missing ';' after cgi");
 
-    std::map<std::string, std::string> cgi = loc.getCgi();
-    cgi[ext] = interpreter;
-    loc.setCgi(cgi);
+                        std::map<std::string, std::string> cgi = loc.getCgi();
+                        cgi[ext] = interpreter;
+                        loc.setCgi(cgi);
 
-    i++;
-}
+                        i++;
+                    }
                     else
                         throw std::runtime_error("unknown directive in location block: " + tokens[i].value);
                 }
