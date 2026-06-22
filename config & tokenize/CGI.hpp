@@ -2,7 +2,8 @@
 
 #include <iostream>
 #include <map>
-
+#include <string>
+#include <sstream>
 class CGI{
 public:
     CGI();
@@ -11,6 +12,12 @@ public:
     std::string execute(const std::string& scriptPath,
                         const std::string& method,
                         const std::string& body);
+    template <typename T>
+    std::string to_string(const T& value) {
+        std::stringstream ss;
+        ss << value;
+        return ss.str();
+    }
 private:
     void buildEnvr();
     void setupPipe();

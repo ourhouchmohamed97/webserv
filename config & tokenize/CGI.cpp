@@ -22,7 +22,7 @@ std::string CGI::execute(const std::string& scriptPath,const std::string& method
         char *argv[] = {(char*)scriptPath.c_str(), NULL};
         std::vector<std::string> env;
         env.push_back("REQUEST_METHOD=" + method);
-        env.push_back("CONTENT_LENGTH=" + std::to_string(body.size()));
+        env.push_back("CONTENT_LENGTH=" + CGI::to_string(body.size()));
         env.push_back("GATEWAY_INTERFACE=CGI/1.1");
         env.push_back("SERVER_PROTOCOL=HTTP/1.1");
         env.push_back("REDIRECT_STATUS=200");

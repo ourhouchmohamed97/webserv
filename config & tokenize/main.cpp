@@ -4,7 +4,6 @@
 int main()
 {
     CGI cgi;
-
     try
     {
         std::string result = cgi.execute(
@@ -12,7 +11,6 @@ int main()
             "GET",
             ""
         );
-
         std::cout << "CGI OUTPUT:\n";
         std::cout << result << std::endl;
     }
@@ -20,6 +18,5 @@ int main()
     {
         std::cout << "ERROR: " << e.what() << std::endl;
     }
-
     return 0;
 }
