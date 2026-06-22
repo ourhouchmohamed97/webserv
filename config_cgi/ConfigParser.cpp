@@ -157,6 +157,31 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                             throw std::runtime_error("missing ';' after location index");
                         i++;
                     }
+                    else if (tokens[i].value == "cgi")
+{
+    i++;
+
+    if (i >= tokens.size())
+        throw std::runtime_error("cgi: missing extension");
+
+    std::string ext = tokens[i].value;
+    i++;
+
+    if (i >= tokens.size())
+        throw std::runtime_error("cgi: missing interpreter");
+
+    std::string interpreter = tokens[i].value;
+    i++;
+
+    if (i >= tokens.size() || tokens[i].value != ";")
+        throw std::runtime_error("missing ';' after cgi");
+
+    std::map<std::string, std::string> cgi = loc.getCgi();
+    cgi[ext] = interpreter;
+    loc.setCgi(cgi);
+
+    i++;
+}
                     else
                         throw std::runtime_error("unknown directive in location block: " + tokens[i].value);
                 }

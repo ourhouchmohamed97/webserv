@@ -2,7 +2,6 @@
 
 print("Content-Type: text/html")
 print()
-
 print("<html>")
 print("<body>")
 print("<h1>Hello from CGI!</h1>")
