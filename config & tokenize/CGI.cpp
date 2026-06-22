@@ -1,8 +1,9 @@
 #include "CGI.hpp"
 #include <unistd.h>
 
-std::string CGI::execute(const std::string& scriptPath,const std::string& method,const std::string& body,
-                        const std::map<std::string, std::string>& headers){
+CGI::CGI(){}
+CGI::~CGI(){}
+std::string CGI::execute(const std::string& scriptPath,const std::string& method,const std::string& body){
     int inPipe[2];
     int outPipe[2];
     pipe(inPipe);
@@ -32,7 +33,7 @@ std::string CGI::execute(const std::string& scriptPath,const std::string& method
         execve(scriptPath.c_str(), argv, envp.data());
         exit(1);
     }
-    else{
+    else {
         close(inPipe[0]);
         close(outPipe[1]);
         if (method == "POST")
