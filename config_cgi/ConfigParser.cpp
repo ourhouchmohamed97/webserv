@@ -75,26 +75,26 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
         while (i < tokens.size() && tokens[i].value != "}")
         {
             if (tokens[i].value == "listen")
-            {
-                i++;
+{
+    i++;
 
-                if (i >= tokens.size())
-                    throw std::runtime_error("listen: missing value");
+    if (i >= tokens.size())
+        throw std::runtime_error("listen: missing value");
 
-                while (i < tokens.size() && tokens[i].value != ";")
-                {
-                    if (!isNumber(tokens[i].value))
-                        throw std::runtime_error("listen: invalid port");
-                    int port = std::atoi(tokens[i].value.c_str());
-                    if (port < 1 || port > 65535)
-                        throw std::runtime_error("listen: port out of range");
-                    server.addPort(port);
-                    i++;
-                }
-                if (i >= tokens.size() || tokens[i].value != ";")
-                    throw std::runtime_error("listen: missing ';'");
-                i++;
-            }
+    while (i < tokens.size() && tokens[i].value != ";")
+    {
+        if (!isNumber(tokens[i].value))
+            throw std::runtime_error("listen: invalid port");
+        int port = std::atoi(tokens[i].value.c_str());
+        if (port < 1 || port > 65535)
+            throw std::runtime_error("listen: port out of range");
+        server.addPort(port);
+        i++;
+    }
+    if (i >= tokens.size() || tokens[i].value != ";")
+        throw std::runtime_error("listen: missing ';'");
+    i++;
+}
             else if (tokens[i].value == "root")
             {
                 i++;
@@ -105,6 +105,17 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
 
                 if (i >= tokens.size() || tokens[i].value != ";")
                     throw std::runtime_error("missing ';' after root");
+                i++;
+            }
+            else if (tokens[i].value == "upload_path")
+            {
+                i++;
+                if (i >= tokens.size())
+                    throw std::runtime_error("upload_path missing value");
+                server.setUploadPath(tokens[i].value);
+                i++;
+                if (i >= tokens.size() || tokens[i].value != ";")
+                    throw std::runtime_error("missing ';' after upload_path");
                 i++;
             }
             else if (tokens[i].value == "index")
@@ -145,6 +156,16 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                             throw std::runtime_error("missing ';' after location root");
                         i++;
                     }
+                    else if (tokens[i].value == "upload_path"){
+                        i++;
+                        if (i >= tokens.size())
+                            throw std::runtime_error("upload_path missing value");
+                        loc.setUploadPath(tokens[i].value);
+                        i++;
+                        if (i >= tokens.size() || tokens[i].value != ";")
+                            throw std::runtime_error("missing ';' after upload_path");
+                        i++;
+                    }
                     else if (tokens[i].value == "index")
                     {
                         i++;
@@ -155,6 +176,23 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                         i++;
                         if (i >= tokens.size() || tokens[i].value != ";")
                             throw std::runtime_error("missing ';' after location index");
+                        i++;
+                    }
+                    else if (tokens[i].value == "cgi"){
+                        i++;
+                        if (i >= tokens.size())
+                            throw std::runtime_error("cgi: missing extension");
+                        std::string ext = tokens[i].value;
+                        i++;
+                        if (i >= tokens.size())
+                            throw std::runtime_error("cgi: missing interpreter");
+                        std::string interpreter = tokens[i].value;
+                        i++;
+                        if (i >= tokens.size() || tokens[i].value != ";")
+                            throw std::runtime_error("missing ';' after cgi");
+                        std::map<std::string, std::string> cgi = loc.getCgi();
+                        cgi[ext] = interpreter;
+                        loc.setCgi(cgi);
                         i++;
                     }
                     else

@@ -23,15 +23,13 @@ public:
     void setPath(const std::string& path);
     std::string getRoot() const;
     void setRoot(const std::string& root);
-
+    const std::string& getUploadPath() const;
+    void setUploadPath(const std::string& path);
     std::vector<std::string> getAllowedMethods() const;
     void setAllowedMethods(const std::vector<std::string>& methods);
 
     bool getAutoindex() const;
     void setAutoindex(bool autoindex);
-
-    std::string getUploadPath() const;
-    void setUploadPath(const std::string& uploadPath);
 
     size_t getClientMaxBodySize() const;
     void    setClientMaxBodySize(size_t size);

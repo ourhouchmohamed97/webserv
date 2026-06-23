@@ -2,6 +2,7 @@
 
 ServerConfig::ServerConfig(){
     _clientMaxBodySize = 1000000;
+    _uploadPath = "";
 }
 ServerConfig::~ServerConfig(){}
 const std::vector<int>& ServerConfig::getPorts() const{
@@ -10,7 +11,12 @@ const std::vector<int>& ServerConfig::getPorts() const{
 void ServerConfig::addPort(int port){
     _ports.push_back(port);
 }
-
+const std::string& ServerConfig::getUploadPath() const{
+    return _uploadPath;
+}
+void ServerConfig::setUploadPath(const std::string& path){
+    _uploadPath = path;
+}
 std::string ServerConfig::getRoot() const{
     return _root;
 }
