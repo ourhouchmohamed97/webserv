@@ -8,6 +8,9 @@
 #include "../request_response/RouteMatcher.hpp"
 #include "../request_response/StaticFileServer.hpp"
 #include "../request_response/HttpUtils.hpp"
+#include "../request_response/ChunkDecoder.hpp"
+#include "UploadHandler.hpp"
+#include <sstream>
 #include <iostream>
 #include <stdexcept>
 #include <exception>
@@ -18,6 +21,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netinet/in.h>
+#include <cstring>
 
 class Server
 {

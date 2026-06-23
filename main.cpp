@@ -34,11 +34,15 @@ int main(int argc, char* argv[])
 
         // 3. Automatically extract listening ports from parsed configuration blocks
         std::vector<int> ports;
-        for (size_t i = 0; i < servers.size(); i++) {
-            int port = servers[i].getPort();
-            ports.push_back(port);
-        }
+        for (size_t i = 0; i < servers.size(); i++)
+        {
+            const std::vector<int>& serverPorts = servers[i].getPorts();
 
+            for (size_t j = 0; j < serverPorts.size(); j++)
+            {
+                ports.push_back(serverPorts[j]);
+            }
+        }
         // 4. Initialize and pass control over to your integrated server pipeline
         Server server(ports, servers);
         server.run();

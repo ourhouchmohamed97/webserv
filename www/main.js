@@ -1,5 +1,5 @@
 /* ============================================
-   WEBSERV DASHBOARD — Shared Javascript Logic
+   WEBSERV DASHBOARD — Real Network Logic
    ============================================ */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -22,7 +22,7 @@ function initNavbar() {
   }
 }
 
-/* ---------- Upload Page Features ---------- */
+/* ---------- Upload Page Features (REAL POST INTEGRATION) ---------- */
 function initUploadPage() {
   const dropzone = document.getElementById('uploadDropzone');
   const fileInput = document.getElementById('fileInput');
@@ -31,7 +31,6 @@ function initUploadPage() {
 
   if (!dropzone) return;
 
-  // Trigger file input dialog
   if (btnSelectFiles && fileInput) {
     btnSelectFiles.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -43,7 +42,6 @@ function initUploadPage() {
     });
   }
 
-  // Dropzone drag/drop listeners
   dropzone.addEventListener('dragover', (e) => {
     e.preventDefault();
     dropzone.classList.add('drag-over');
@@ -63,96 +61,133 @@ function initUploadPage() {
     if (fileInput) fileInput.click();
   });
 
-  // Handle addition of uploaded files
+  // REAL LOGIC: Sends data to your C++ server
   function handleFiles(files) {
     if (!files.length) return;
     
-    // Simulate files upload transmission
     const streamPlaceholder = document.querySelector('.stream-placeholder');
-    if (streamPlaceholder) {
-      streamPlaceholder.innerHTML = `
-        <div class="flex flex-col items-center gap-8 w-full">
-          <div class="badge badge-purple" style="width: 100%; justify-content: center; animation: pulse 1.5s infinite;">TRANSFERENCE IN PROGRESS</div>
-          <span style="font-size:11px; color:var(--text-secondary); text-align:center;">
-            Uploading ${files.length} file(s)...
-          </span>
-        </div>
-      `;
+    if (!streamPlaceholder) return;
 
-      setTimeout(() => {
+    // Set UI to transmission mode
+    streamPlaceholder.innerHTML = `
+      <div class="flex flex-col items-center gap-8 w-full">
+        <div class="badge badge-purple" style="width: 100%; justify-content: center; animation: pulse 1.5s infinite;">TRANSFERENCE IN PROGRESS</div>
+        <span style="font-size:11px; color:var(--text-secondary); text-align:center;">
+          Uploading ${files.length} file(s) natively...
+        </span>
+      </div>
+    `;
+
+    // Process file elements asynchronously 
+    Array.from(files).forEach(file => {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      // Make a true network POST to your server configuration block route
+      fetch('/upload', {
+        method: 'POST',
+        body: formData
+      })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Server returned ${response.status}`);
+        return response.text();
+      })
+      .then(() => {
+        // Success UI rendering
         streamPlaceholder.innerHTML = `
           <div class="flex flex-col items-center gap-8 w-full">
             <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2" width="24" height="24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            <span style="font-size:11px; color:var(--accent-green); font-weight:600;">Upload Completed successfully!</span>
+            <span style="font-size:11px; color:var(--accent-green); font-weight:600;">"${file.name}" Ingested!</span>
           </div>
         `;
 
-        // Add file items into the table
-        const tbody = fileTable.querySelector('tbody');
-        Array.from(files).forEach(file => {
-          const row = document.createElement('tr');
-          const ext = file.name.split('.').pop().toLowerCase();
-          let formatBadge = 'TXT';
-          let iconClass = 'txt';
-
-          if (['conf', 'cfg'].includes(ext)) { formatBadge = 'CONF'; iconClass = 'conf'; }
-          else if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext)) { formatBadge = 'IMAGE'; iconClass = 'image'; }
-          else if (['cgi', 'py', 'sh', 'pl'].includes(ext)) { formatBadge = 'CGI'; iconClass = 'cgi'; }
-          else if (ext === 'pdf') { formatBadge = 'PDF'; iconClass = 'pdf'; }
-
-          const formattedSize = file.size > 1024 * 1024 
-            ? (file.size / (1024 * 1024)).toFixed(1) + ' MB'
-            : (file.size / 1024).toFixed(1) + ' KB';
-
-          const today = new Date().toISOString().slice(0, 16).replace('T', ' ');
-
-          row.innerHTML = `
-            <td>
-              <div class="file-name-cell">
-                <div class="file-icon ${iconClass}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                </div>
-                ${file.name}
-              </div>
-            </td>
-            <td><span class="format-badge ${iconClass}">${formatBadge}</span></td>
-            <td class="file-size">${formattedSize}</td>
-            <td class="file-date">${today}</td>
-            <td>
-              <button class="file-delete-btn" aria-label="Delete file">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
-            </td>
-          `;
-          tbody.insertBefore(row, tbody.firstChild);
-          bindDeleteBtn(row.querySelector('.file-delete-btn'));
-        });
-
-        // Update count badge
-        const countBadge = document.querySelector('.file-count');
-        if (countBadge) {
-          const rowsCount = tbody.querySelectorAll('tr').length;
-          countBadge.textContent = `${rowsCount} Total Objects`;
-        }
-
-        // Reset status message back to normal after 3 seconds
+        // Inject row directly into the visual structural table
+        appendFileToTable(file);
+      })
+      .catch((error) => {
+        // Error handling visual loop
+        streamPlaceholder.innerHTML = `
+          <div class="flex flex-col items-center gap-8 w-full">
+            <span style="font-size:11px; color:#ef4444; font-weight:600;">Transmission Error</span>
+            <span style="font-size:10px; color:var(--text-secondary);">${error.message}</span>
+          </div>
+        `;
+      })
+      .finally(() => {
+        // Reset placeholder back to baseline after timeout delay
         setTimeout(() => {
           streamPlaceholder.innerHTML = `
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             <span>No active transmissions</span>
           `;
-        }, 3000);
+        }, 4000);
+      });
+    });
+  }
 
-      }, 1500);
+  function appendFileToTable(file) {
+    const tbody = fileTable.querySelector('tbody');
+    const row = document.createElement('tr');
+    const ext = file.name.split('.').pop().toLowerCase();
+    let formatBadge = 'TXT';
+    let iconClass = 'txt';
+
+    if (['conf', 'cfg'].includes(ext)) { formatBadge = 'CONF'; iconClass = 'conf'; }
+    else if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext)) { formatBadge = 'IMAGE'; iconClass = 'image'; }
+    else if (['cgi', 'py', 'sh', 'pl'].includes(ext)) { formatBadge = 'CGI'; iconClass = 'cgi'; }
+    else if (ext === 'pdf') { formatBadge = 'PDF'; iconClass = 'pdf'; }
+
+    const formattedSize = file.size > 1024 * 1024 
+      ? (file.size / (1024 * 1024)).toFixed(1) + ' MB'
+      : (file.size / 1024).toFixed(1) + ' KB';
+
+    const today = new Date().toISOString().slice(0, 16).replace('T', ' ');
+
+    row.innerHTML = `
+      <td>
+        <div class="file-name-cell">
+          <div class="file-icon ${iconClass}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          ${file.name}
+        </div>
+      </td>
+      <td><span class="format-badge ${iconClass}">${formatBadge}</span></td>
+      <td class="file-size">${formattedSize}</td>
+      <td class="file-date">${today}</td>
+      <td>
+        <button class="file-delete-btn" data-filename="${file.name}" aria-label="Delete file">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </td>
+    `;
+    tbody.insertBefore(row, tbody.firstChild);
+    bindDeleteBtn(row.querySelector('.file-delete-btn'));
+
+    const countBadge = document.querySelector('.file-count');
+    if (countBadge) {
+      countBadge.textContent = `${tbody.querySelectorAll('tr').length} Total Objects`;
     }
   }
 
-  // Bind deletion of file items
+  // REAL LOGIC: Sends HTTP DELETE requests to server 
   function bindDeleteBtn(button) {
     button.addEventListener('click', (e) => {
       e.stopPropagation();
       const row = button.closest('tr');
-      if (row) {
+      // Retrieve original explicit name (fallback to dynamic text string parsing if attribute missing)
+      const filename = button.getAttribute('data-filename') || row.querySelector('.file-name-cell').textContent.trim();
+
+      if (!row) return;
+
+      // Dispatch real HTTP DELETE standard package method
+      fetch(`/upload/${filename}`, {
+        method: 'DELETE'
+      })
+      .then(response => {
+        if (!response.ok) throw new Error("Delete method disallowed by backend rules.");
+        
+        // Dynamic UI Removal Animation
         row.style.opacity = '0';
         row.style.transform = 'translateX(20px)';
         row.style.transition = 'all 0.3s ease';
@@ -160,16 +195,16 @@ function initUploadPage() {
           row.remove();
           const countBadge = document.querySelector('.file-count');
           if (countBadge) {
-            const rowsCount = fileTable.querySelector('tbody').querySelectorAll('tr').length;
-            countBadge.textContent = `${rowsCount} Total Objects`;
+            countBadge.textContent = `${fileTable.querySelector('tbody').querySelectorAll('tr').length} Total Objects`;
           }
-        }, 3000); // wait for anim
-        row.remove();
-      }
+        }, 300);
+      })
+      .catch(err => {
+        alert(`Failed to delete object from server: ${err.message}`);
+      });
     });
   }
 
-  // Bind initial row delete buttons
   document.querySelectorAll('.file-delete-btn').forEach(btn => bindDeleteBtn(btn));
 }
 
@@ -184,7 +219,6 @@ function initGalleryPage() {
 
   if (!fileGrid) return;
 
-  // View style toggle logic (simulate list vs grid layouts)
   if (viewGridBtn && viewListBtn) {
     viewGridBtn.addEventListener('click', () => {
       viewGridBtn.classList.add('active');
@@ -201,18 +235,15 @@ function initGalleryPage() {
     });
   }
 
-  // Filtering by category list
   categoryItems.forEach(item => {
     item.addEventListener('click', () => {
       categoryItems.forEach(i => i.classList.remove('active'));
       item.classList.add('active');
-
       const targetCategory = item.getAttribute('data-category');
       filterFiles(targetCategory, searchInput ? searchInput.value : '');
     });
   });
 
-  // Filtering by search input
   if (searchInput) {
     searchInput.addEventListener('input', () => {
       const activeCategoryItem = document.querySelector('.category-item.active');
@@ -228,42 +259,29 @@ function initGalleryPage() {
     cards.forEach(card => {
       const type = card.getAttribute('data-type');
       const name = card.getAttribute('data-name').toLowerCase();
-
       const matchesCategory = (category === 'all' || type === category);
       const matchesSearch = (cleanSearch === '' || name.includes(cleanSearch));
-
-      if (matchesCategory && matchesSearch) {
-        card.style.display = 'block';
-      } else {
-        card.style.display = 'none';
-      }
+      card.style.display = (matchesCategory && matchesSearch) ? 'block' : 'none';
     });
   }
 
-  // Sort files logic
   if (sortSelect) {
     sortSelect.addEventListener('change', () => {
       const cards = Array.from(fileGrid.querySelectorAll('.file-card'));
       const sortVal = sortSelect.value;
 
       cards.sort((a, b) => {
-        if (sortVal === 'name') {
-          return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
-        } else if (sortVal === 'newest') {
-          return new Date(b.getAttribute('data-date')) - new Date(a.getAttribute('data-date'));
-        } else if (sortVal === 'oldest') {
-          return new Date(a.getAttribute('data-date')) - new Date(b.getAttribute('data-date'));
-        } else {
-          return 0; // fallback
-        }
+        if (sortVal === 'name') return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
+        if (sortVal === 'newest') return new Date(b.getAttribute('data-date')) - new Date(a.getAttribute('data-date'));
+        if (sortVal === 'oldest') return new Date(a.getAttribute('data-date')) - new Date(b.getAttribute('data-date'));
+        return 0;
       });
-
       cards.forEach(card => fileGrid.appendChild(card));
     });
   }
 }
 
-/* ---------- CGI Terminal Emulation ---------- */
+/* ---------- CGI Terminal Emulation (REAL ROUTE EXECUTION) ---------- */
 function initCgiPage() {
   const terminalBody = document.getElementById('terminalBody');
   const commandField = document.getElementById('commandField');
@@ -273,80 +291,85 @@ function initCgiPage() {
 
   if (!terminalBody) return;
 
-  // Add click support to script pills
   scriptPills.forEach(pill => {
     pill.addEventListener('click', () => {
       scriptPills.forEach(p => p.classList.remove('active'));
       pill.classList.add('active');
-      
       const scriptName = pill.getAttribute('data-script');
       if (commandField) {
-        commandField.value = scriptName;
+        commandField.value = `./${scriptName}`;
         commandField.focus();
       }
     });
   });
 
-  // Clear Console action
   if (btnClearConsole) {
     btnClearConsole.addEventListener('click', () => {
       terminalBody.innerHTML = `
         <div class="terminal-line">
           <span class="terminal-timestamp">${getCurrentTime()}</span>
-          <span class="terminal-text info">Console cleared. Shell v1.0 standing by.</span>
+          <span class="terminal-text info">Console cleared. Shell standing by.</span>
         </div>
       `;
     });
   }
 
-  // Execute action logic
   if (btnExecute && commandField) {
-    btnExecute.addEventListener('click', () => {
-      executeCommand(commandField.value);
-    });
-
+    btnExecute.addEventListener('click', () => { executeCommand(commandField.value); });
     commandField.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        executeCommand(commandField.value);
-      }
+      if (e.key === 'Enter') executeCommand(commandField.value);
     });
   }
 
+  // REAL LOGIC: Routes query text payload strings to your actual CGI gateway engine
   function executeCommand(cmdText) {
     const cleanCmd = cmdText.trim();
     if (!cleanCmd) return;
 
-    // Output user command line
     appendTerminalLine(cleanCmd, 'command', 'webserv@admin:~$ ');
 
-    // Simulated responses based on commands
-    setTimeout(() => {
-      if (cleanCmd.includes('hello_world.py')) {
-        appendTerminalLine('Content-type: text/html', 'output');
-        appendTerminalLine('', 'output');
-        appendTerminalLine('<h1>Hello from Webserv CGI!</h1>', 'success');
-      } else if (cleanCmd.includes('server_info.sh')) {
-        appendTerminalLine('Content-type: text/plain', 'output');
-        appendTerminalLine('', 'output');
-        appendTerminalLine('Webserv Engine: v1.1.0-stable\nC++ Standard: C++98\nCompiler: GCC 4.2.1\nUptime: 2 days, 14 hours\nActive Connections: 342', 'output');
-      } else if (cleanCmd.includes('db_query.py')) {
-        appendTerminalLine('Content-type: application/json', 'output');
-        appendTerminalLine('', 'output');
-        appendTerminalLine('{\n  "status": "success",\n  "database": "webserv_logs",\n  "records": [\n    {"id": 1, "client": "127.0.0.1", "status": 200, "bytes": 1420},\n    {"id": 2, "client": "192.168.1.50", "status": 404, "bytes": 158}\n  ]\n}', 'info');
-      } else if (cleanCmd.toLowerCase() === 'clear') {
-        terminalBody.innerHTML = '';
-      } else if (cleanCmd.toLowerCase() === 'help') {
-        appendTerminalLine('Available CGI scripts:\n  - ./hello_world.py\n  - ./server_info.sh\n  - ./db_query.py\nOther shell utilities:\n  - clear\n  - help\n  - status', 'info');
-      } else if (cleanCmd.toLowerCase() === 'status') {
-        appendTerminalLine('STATUS: ONLINE\nPORT: 8080\nLATENCY: 0.042s\nMEMORY: 14.2 MB', 'success');
-      } else {
-        appendTerminalLine(`webserv-cgi-error: command not found: ${cleanCmd}`, 'output');
-        appendTerminalLine('Tip: type "help" or run one of the Quick Scripts.', 'info');
-      }
+    if (cleanCmd.toLowerCase() === 'clear') {
+      terminalBody.innerHTML = '';
+      commandField.value = '';
+      return;
+    }
 
-      // Auto scroll to bottom
+    // Isolate pure script parsing identifiers
+    let targetScriptPath = cleanCmd.replace('./', '');
+    
+    // Fallback handlers for common default baseline shell requests
+    if (cleanCmd.toLowerCase() === 'help') {
+      appendTerminalLine('Available routing scripts:\n  - ./hello_world.py\n  - ./server_info.sh\n  - ./db_query.py', 'info');
+      commandField.value = '';
+      return;
+    }
+    if (cleanCmd.toLowerCase() === 'status') {
+      appendTerminalLine('STATUS: RUNNING THROUGH INTERCEPT SOCK LOOP\nSTANDARDS: C++98 ENGINE COMPLIANT', 'success');
+      commandField.value = '';
+      return;
+    }
+
+    // Process actual network query down to your script pipeline paths via GET requests
+    fetch(`/cgi-bin/${targetScriptPath}`)
+    .then(async (response) => {
+      appendTerminalLine(`Status returned: ${response.status}`, 'info');
+      return response.text();
+    })
+    .then((rawOutput) => {
+      // Split lines cleanly to feed output down to the terminal terminal interface window
+      const outputLines = rawOutput.split('\n');
+      outputLines.forEach(line => {
+        if (line.trim()) {
+          appendTerminalLine(line, 'output');
+        }
+      });
+    })
+    .catch((error) => {
+      appendTerminalLine(`webserv-cgi-error execution failure: ${error.message}`, 'danger');
+    })
+    .finally(() => {
       terminalBody.scrollTop = terminalBody.scrollHeight;
-    }, 400);
+    });
 
     commandField.value = '';
   }
@@ -362,7 +385,6 @@ function initCgiPage() {
     const textSpan = document.createElement('span');
     textSpan.className = `terminal-text ${cssClass}`;
     
-    // Add escape support for HTML in logs
     const escaped = text
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -378,7 +400,6 @@ function initCgiPage() {
   }
 
   function getCurrentTime() {
-    const now = new Date();
-    return now.toTimeString().split(' ')[0];
+    return new Date().toTimeString().split(' ')[0];
   }
 }
