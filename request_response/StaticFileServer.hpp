@@ -2,6 +2,7 @@
 
 #include "../request_response/HttpUtils.hpp"
 #include "../config_cgi/LocationConfig.hpp"
+#include "ErrorPageFactory.hpp" // 🌟 Linked to your high-fidelity error styles!
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -9,6 +10,7 @@
 #include <cstring>
 #include <vector>
 #include <cstdio>
+#include <iostream>
 
 class StaticFileServer {
 private:
@@ -24,13 +26,12 @@ private:
         return "text/plain";
     }
 
-    static HttpResponse generateErrorResponse(int code, const std::string& msg) {
+    // 🌟 LINKED: Now calls your custom dashboard factory instead of printing plain unstyled text
+    static HttpResponse generateErrorResponse(int code) {
         HttpResponse res;
         res.statusCode = code;
         res.headers["Content-Type"] = "text/html";
-        std::stringstream ss;
-        ss << "<html><body><h1>" << code << " " << msg << "</h1></body></html>";
-        res.body = ss.str();
+        res.body = ErrorPageFactory::getErrorPage(code);
         return res;
     }
 
@@ -38,43 +39,30 @@ public:
     static HttpResponse serveFile(const HttpRequest& req, const LocationConfig& loc) {
         HttpResponse res;
         
+        // 1. Guard Rule: Max Body Size Limit Caps
         if (req.body.length() > loc.getClientMaxBodySize()) {
-            return generateErrorResponse(413, "Payload Too Large");
+            return generateErrorResponse(413);
         }
 
+        // 2. Guard Rule: Method Permissions Check
         std::vector<std::string> methods = loc.getAllowedMethods();
         if (!methods.empty() && std::find(methods.begin(), methods.end(), req.method) == methods.end()) {
-            return generateErrorResponse(405, "Method Not Allowed");
+            return generateErrorResponse(405);
         }
 
-        std::string fullPath = loc.getRoot() + req.path;
-
-        if (!req.path.empty() && req.path.at(req.path.length() - 1) == '/') {
-            if (!loc.getIndex().empty()) {
-                fullPath += loc.getIndex();
-            } else {
-                return generateErrorResponse(403, "Forbidden");
-            }
-        }
-
-        // 🌟 EXPLICIT DESTRUCTIVE FILE REMOVAL TERMINATOR
-        // 🌟 EXPLICIT DESTRUCTIVE FILE REMOVAL TERMINATOR
+        // 🌟 EXPLICIT DESTRUCTIVE FILE REMOVAL TERMINATOR (DELETE Pathway Execution)
         if (req.method == "DELETE") {
-            // Log this path to your terminal window so you can see exactly what path C++ is trying to delete!
             std::cout << "[DEBUG DELETE] Raw req.path: " << req.path << std::endl;
             std::cout << "[DEBUG DELETE] Location root: " << loc.getRoot() << std::endl;
 
             std::string fileToDitch = req.path;
             
-            // If the request path is "/upload/filename.txt" and your root is already "www/upload",
-            // we need to strip out the extra "/upload" prefix so they don't double up!
             if (fileToDitch.find("/upload/") == 0) {
                 fileToDitch = fileToDitch.substr(7); // Strips "/upload" leaving just "filename.txt"
             } else if (fileToDitch.find("/") == 0) {
                 fileToDitch = fileToDitch.substr(1); // Strips leading slash if necessary
             }
 
-            // Combine clean filename with the designated folder root
             std::string trueStoragePath = loc.getRoot();
             if (!trueStoragePath.empty() && trueStoragePath.at(trueStoragePath.length() - 1) != '/') {
                 trueStoragePath += "/";
@@ -90,14 +78,26 @@ public:
                 return res;
             } else {
                 std::cerr << "[DEBUG DELETE] std::remove failed for: " << trueStoragePath << " (Error: " << strerror(errno) << ")" << std::endl;
-                return generateErrorResponse(404, "Not Found: File deletion target path unresolvable.");
+                return generateErrorResponse(404);
             }
         }
 
-        // Standard operational logic paths for normal GET/POST content views
+        // 3. Resolve File Path System (For GET / POST static reads)
+        std::string fullPath = loc.getRoot() + req.path;
+
+        // 4. Handle Directory Access Requests
+        if (!req.path.empty() && req.path.at(req.path.length() - 1) == '/') {
+            if (!loc.getIndex().empty()) {
+                fullPath += loc.getIndex();
+            } else {
+                return generateErrorResponse(403);
+            }
+        }
+
+        // 5. Standard Operational Logic for Asset Data Reads
         std::ifstream file(fullPath.c_str(), std::ios::binary);
         if (!file.is_open()) {
-            return generateErrorResponse(404, "Not Found");
+            return generateErrorResponse(404);
         }
 
         std::stringstream buffer;
