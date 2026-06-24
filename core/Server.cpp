@@ -11,18 +11,17 @@ Server::~Server()
 {
     for (size_t i = 0; i < fds.size(); i++)
         close(fds[i].fd);
-    
 }
 
 void  Server::setupSocket(int port)
 {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0)
-        throw::std::runtime_error("Socket failed");
+        throw std::runtime_error("Socket failed");
     
     int opt = 1;
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
-        throw::std::runtime_error("SetSockopt failed");
+        throw std::runtime_error("SetSockopt failed");
     
     struct sockaddr_in addr = {};
     addr.sin_family = AF_INET;
@@ -30,12 +29,12 @@ void  Server::setupSocket(int port)
     addr.sin_addr.s_addr = INADDR_ANY;
     
     if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-        throw::std::runtime_error("Bind failed");
+        throw std::runtime_error("Bind failed");
     if (listen(fd, 10) < 0)
-        throw::std::runtime_error("Listen failed");
+        throw std::runtime_error("Listen failed");
     
     if (fcntl(fd, F_SETFL, O_NONBLOCK))
-        throw::std::runtime_error("fcntl F_SETFL failed");
+        throw std::runtime_error("fcntl F_SETFL failed");
 
     struct pollfd pfd;
     pfd.fd = fd;
@@ -74,7 +73,7 @@ void Server::acceptClient(int serverfd)
             return ;
 
         if (fcntl(client_fd, F_SETFL, O_NONBLOCK))
-            throw::std::runtime_error("fcntl of client failed");
+            throw std::runtime_error("fcntl of client failed");
 
         pollfd client_poll;
         client_poll.fd = client_fd;
@@ -85,20 +84,16 @@ void Server::acceptClient(int serverfd)
         clients.insert(std::make_pair(client_fd, Client(client_fd)));
         std::cout << "New client: " << client_fd << std::endl;
     }
-
 }
 
-// Robust tracking logic to evaluate block boundaries completely
 bool Server::isReqComplete(const std::string &req)
 {
     size_t header_end = req.find("\r\n\r\n");
     if (header_end == std::string::npos)
         return false;
 
-    // Check if the Browser utilizes chunk transfer streams instead of standard layout definitions
     if (req.find("Transfer-Encoding: chunked") != std::string::npos || 
         req.find("transfer-encoding: chunked") != std::string::npos) {
-        // A chunked message ends structurally with a terminative sequence token: "0\r\n\r\n"
         return (req.rfind("0\r\n\r\n") == req.length() - 5);
     }
 
@@ -146,7 +141,6 @@ void Server::readFromClient(size_t i)
         return;
 
     try {
-        // Pre-Process Request Buffer to strip chunk flags if detected
         std::string processedBuffer = cli.requestBuffer;
         if (processedBuffer.find("Transfer-Encoding: chunked") != std::string::npos ||
             processedBuffer.find("transfer-encoding: chunked") != std::string::npos) {
@@ -168,32 +162,46 @@ void Server::readFromClient(size_t i)
         }
 
         LocationConfig loc = RouteMatcher::match(req.path, activeConfig);
-
-        // 🌟 CRITICAL ROUTE BRANCH SEPARATION WORKER
         std::map<std::string, std::string> cgiMap = loc.getCgi();
         
+        // 1. Resolve relative and absolute paths early
+        std::string relative = req.path;
+        if (relative.find(loc.getPath()) == 0)
+            relative = relative.substr(loc.getPath().size());
+
+        if (!relative.empty() && relative[0] != '/')
+            relative = "/" + relative;
+
+        std::string scriptPath = loc.getRoot() + relative;
+
+        // 2. Safely capture file extension rules
+        size_t dotPos = scriptPath.find_last_of(".");
+        std::string ext = (dotPos != std::string::npos) ? scriptPath.substr(dotPos) : "";
+
+        // 🌟 FIX: Verify extension is mapped in config before blindly flags CGI routing branches
+        bool isCgiRequest = (!cgiMap.empty() && !ext.empty() && cgiMap.find(ext) != cgiMap.end());
+
         // Branch 1: If path maps to POST on an allowed upload route directory rules
         if (req.method == "POST" && req.path == "/upload") {
-            HttpResponse res = UploadHandler::handle(req, loc);
+            HttpResponse res = UploadHandler::handle(req, loc, activeConfig);
             cli.responseBuffer = res.toString();
         }
-        // Branch 2: Handle via CGI configuration rules
-        else if (!cgiMap.empty()) {
-            // Determine script path by resolving req.path against the root directory
-            // std::string scriptPath = loc.getRoot() + req.path;
-            std::string relative = req.path;
+        // Branch 2: Handle via verified CGI configuration rules matching extension configurations
+        else if (isCgiRequest) {
+            std::string interpreterPath = "";
+            if (cgiMap.find(ext) != cgiMap.end()) {
+                interpreterPath = cgiMap[ext];
+            } else if (cgiMap.find("default") != cgiMap.end()) {
+                interpreterPath = cgiMap["default"];
+            } else {
+                interpreterPath = scriptPath;
+            }
 
-            if (relative.find(loc.getPath()) == 0)
-                relative = relative.substr(loc.getPath().size());
-
-            if (!relative.empty() && relative[0] != '/')
-                relative = "/" + relative;
-
-            std::string scriptPath = loc.getRoot() + relative;
+            std::cout << "[DEBUG SERVER] Executing matching CGI target script: " << scriptPath << std::endl;
 
             CGI cgiHandler;
-            std::string cgiOutput = cgiHandler.execute(scriptPath, req.method, req.body, req.headers);
-
+            std::string cgiOutput = cgiHandler.execute(interpreterPath, scriptPath, req.method, req.body, req.headers);
+            
             size_t headerEnd = cgiOutput.find("\r\n\r\n");
             if (headerEnd == std::string::npos)
                 headerEnd = cgiOutput.find("\n\n");
@@ -214,18 +222,16 @@ void Server::readFromClient(size_t i)
             }
             std::stringstream ss;
             ss << "HTTP/1.1 200 OK\r\n"
-            << cgiHeaders << "\r\n"
-            << "Content-Length: " << cgiBody.length() << "\r\n"
-            << "\r\n"
-            << cgiBody;
+               << cgiHeaders << "\r\n"
+               << "Content-Length: " << cgiBody.length() << "\r\n"
+               << "\r\n"
+               << cgiBody;
 
             cli.responseBuffer = ss.str();
-
-            
         } 
         // Branch 3: Default static file server logic paths (GET / DELETE operations)
         else {
-            HttpResponse res = StaticFileServer::serveFile(req, loc);
+            HttpResponse res = StaticFileServer::serveFile(req, loc, activeConfig);
             cli.responseBuffer = res.toString();
         }
     } catch (const std::exception& e) {
@@ -236,7 +242,6 @@ void Server::readFromClient(size_t i)
     cli.state = WRITING;
     fds[i].events = POLLOUT;
 }
-
 
 void    Server::writeToClient(size_t i)
 {
@@ -259,7 +264,7 @@ void    Server::run()
     while (true)
     {
         if(poll(&fds[0], fds.size(), -1) < 0)
-            throw::std::runtime_error("poll failed");
+            throw std::runtime_error("poll failed");
         for (size_t i = 0; i < fds.size(); i++)
         {
             if (fds[i].revents == 0)
@@ -288,5 +293,4 @@ void    Server::run()
             }
         }
     }
-    
 }

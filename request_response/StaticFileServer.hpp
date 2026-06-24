@@ -2,6 +2,7 @@
 
 #include "../request_response/HttpUtils.hpp"
 #include "../config_cgi/LocationConfig.hpp"
+#include "../config_cgi/ServerConfig.hpp"
 #include "ErrorPageFactory.hpp"
 #include <string>
 #include <fstream>
@@ -28,55 +29,53 @@ private:
     }
 
 public:
-    // 🌟 Check configuration directives first; fall back to ErrorPageFactory default templates
-    static HttpResponse generateErrorResponse(int code, const LocationConfig& loc) {
+    static HttpResponse generateErrorResponse(int code, const ServerConfig& config) {
         HttpResponse res;
         res.statusCode = code;
         res.headers["Content-Type"] = "text/html";
 
-        // 1. Inspect configuration file rules for a custom specified error page
-        std::map<int, std::string> errorPages = loc.getErrorPages();
-        std::map<int, std::string>::iterator it = errorPages.find(code);
-
-        if (it != errorPages.end() && !it->second.empty()) {
-            std::string customPath = it->second;
+        std::string customPath = config.getErrorPage(code);
+        if (!customPath.empty()) {
             std::ifstream customFile(customPath.c_str(), std::ios::binary);
-            
             if (customFile.is_open()) {
                 std::cout << "[DEBUG ERROR] Serving configured error page file: " << customPath << std::endl;
                 std::stringstream buffer;
                 buffer << customFile.rdbuf();
                 res.body = buffer.str();
                 customFile.close();
+
+                // 🌟 Set length for custom error page contents
+                std::stringstream ssLen;
+                ssLen << res.body.length();
+                res.headers["Content-Length"] = ssLen.str();
                 return res;
             }
             std::cerr << "[WARN ERROR] Configured error_page file unresolvable: " << customPath << ". Falling back to defaults." << std::endl;
         }
 
-        // 2. Default System Fallback
         res.body = ErrorPageFactory::getErrorPage(code);
+        
+        // 🌟 Set length for default error page template contents
+        std::stringstream ssLen;
+        ssLen << res.body.length();
+        res.headers["Content-Length"] = ssLen.str();
         return res;
     }
 
-    static HttpResponse serveFile(const HttpRequest& req, const LocationConfig& loc) {
+    static HttpResponse serveFile(const HttpRequest& req, const LocationConfig& loc, const ServerConfig& config) {
         HttpResponse res;
         
-        // 1. Guard Rule: Max Body Size Limit Caps
         if (req.body.length() > loc.getClientMaxBodySize()) {
-            return generateErrorResponse(413, loc);
+            return generateErrorResponse(413, config);
         }
 
-        // 2. Guard Rule: Method Permissions Check
         std::vector<std::string> methods = loc.getAllowedMethods();
         if (!methods.empty() && std::find(methods.begin(), methods.end(), req.method) == methods.end()) {
-            return generateErrorResponse(405, loc);
+            return generateErrorResponse(405, config);
         }
 
-        // 🌟 EXPLICIT DESTRUCTIVE FILE REMOVAL TERMINATOR
         if (req.method == "DELETE") {
             std::cout << "[DEBUG DELETE] Raw req.path: " << req.path << std::endl;
-            std::cout << "[DEBUG DELETE] Location root: " << loc.getRoot() << std::endl;
-
             std::string fileToDitch = req.path;
             
             if (fileToDitch.find("/upload/") == 0) {
@@ -91,35 +90,47 @@ public:
             }
             trueStoragePath += fileToDitch;
 
-            std::cout << "[DEBUG DELETE] Attempting to erase target file at: " << trueStoragePath << std::endl;
-
             if (std::remove(trueStoragePath.c_str()) == 0) {
                 res.statusCode = 200; 
                 res.headers["Content-Type"] = "text/plain";
                 res.body = "File successfully removed from server cluster disk volume.\n";
+                
+                std::stringstream ssLen;
+                ssLen << res.body.length();
+                res.headers["Content-Length"] = ssLen.str();
                 return res;
             } else {
-                std::cerr << "[DEBUG DELETE] std::remove failed for: " << trueStoragePath << " (Error: " << strerror(errno) << ")" << std::endl;
-                return generateErrorResponse(404, loc);
+                return generateErrorResponse(404, config);
             }
         }
 
-        // 3. Resolve File Path System (For GET / POST static reads)
-        std::string fullPath = loc.getRoot() + req.path;
+        // 3. Resolve File Path System
+        std::string rootPath = loc.getRoot();
+        std::string reqPath = req.path;
+
+        // Strip overlapping slashes safely
+        if (!rootPath.empty() && rootPath.at(rootPath.length() - 1) == '/' && !reqPath.empty() && reqPath.at(0) == '/') {
+            rootPath = rootPath.substr(0, rootPath.length() - 1);
+        }
+        std::string fullPath = rootPath + reqPath;
 
         // 4. Handle Directory Access Requests
-        if (!req.path.empty() && req.path.at(req.path.length() - 1) == '/') {
+        if (!reqPath.empty() && reqPath.at(reqPath.length() - 1) == '/') {
             if (!loc.getIndex().empty()) {
                 fullPath += loc.getIndex();
             } else {
-                return generateErrorResponse(403, loc);
+                return generateErrorResponse(403, config);
             }
         }
+
+        // 🌟 Add print trackers to find out exactly where the 404 triggers
+        std::cout << "[STATIC SERVER DEBUG] Attempting file read at target path: " << fullPath << std::endl;
 
         // 5. Standard Operational Logic for Asset Data Reads
         std::ifstream file(fullPath.c_str(), std::ios::binary);
         if (!file.is_open()) {
-            return generateErrorResponse(404, loc);
+            std::cerr << "[STATIC SERVER ERROR] Cannot open target file: " << fullPath << " (Error: " << strerror(errno) << ")" << std::endl;
+            return generateErrorResponse(404, config);
         }
 
         std::stringstream buffer;
@@ -129,6 +140,11 @@ public:
 
         res.statusCode = 200;
         res.headers["Content-Type"] = getContentType(fullPath);
+        
+        // 🌟 CRITICAL FIX: Calculate and assign explicit Content-Length headers!
+        std::stringstream ssLen;
+        ssLen << res.body.length();
+        res.headers["Content-Length"] = ssLen.str();
         
         return res;
     }

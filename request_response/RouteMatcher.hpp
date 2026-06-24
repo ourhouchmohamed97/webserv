@@ -32,13 +32,14 @@ public:
         }
 
         // Fallback fallback mechanism: if no location block matched, build a basic root default
-        if (!found) {
-            bestMatch.setPath("/");
-            bestMatch.setRoot(serverConfig.getRoot().empty() ? "./www" : serverConfig.getRoot());
-            bestMatch.setIndex(serverConfig.getIndex().empty() ? "index.html" : serverConfig.getIndex());
-            bestMatch.setAutoindex(false);
-        }
-
+        if (found) {
+    if (bestMatch.getRoot().empty()) {
+        bestMatch.setRoot(serverConfig.getRoot());
+    }
+    if (bestMatch.getIndex().empty()) {
+        bestMatch.setIndex(serverConfig.getIndex());
+    }
+}
         return bestMatch;
     }
 };

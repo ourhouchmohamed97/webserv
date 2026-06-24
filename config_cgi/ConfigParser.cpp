@@ -153,7 +153,7 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                 i++;
                 if (i >= tokens.size() || tokens[i].value != ";")
                     throw std::runtime_error("missing ';'");
-                    i++;
+                i++;
             }
             else if (tokens[i].value == "error_page"){
                 i++;
@@ -161,7 +161,7 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                 i++;
                 if (i >= tokens.size())
                     throw std::runtime_error("error_page missing path");
-                    server.addErrorPage(code, tokens[i].value);
+                server.addErrorPage(code, tokens[i].value);
                 i++;
                 if (i >= tokens.size() || tokens[i].value != ";")
                     throw std::runtime_error("missing ';'");

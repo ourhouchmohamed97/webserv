@@ -2,25 +2,15 @@
 
 #include "../request_response/HttpUtils.hpp"
 #include "../config_cgi/LocationConfig.hpp"
+#include "../config_cgi/ServerConfig.hpp"
 #include "../request_response/MultipartParser.hpp"
-#include "../request_response/ErrorPageFactory.hpp" // 🌟 Include your design system factory
-#include <fstream>
+#include "../request_response/StaticFileServer.hpp"
 #include <sstream>
 #include <iostream>
 
 class UploadHandler {
-private:
-    // Helper to generate styled error pages quickly
-    static HttpResponse generateError(int code) {
-        HttpResponse res;
-        res.statusCode = code;
-        res.headers["Content-Type"] = "text/html";
-        res.body = ErrorPageFactory::getErrorPage(code);
-        return res;
-    }
-
 public:
-    static HttpResponse handle(const HttpRequest& req, const LocationConfig& loc) {
+    static HttpResponse handle(const HttpRequest& req, const LocationConfig& loc, const ServerConfig& config) {
         HttpResponse res;
 
         // 1. Verify Content-Type header integrity definitions
@@ -30,7 +20,7 @@ public:
         }
         
         if (it == req.headers.end() || it->second.find("multipart/form-data") == std::string::npos) {
-            return generateError(400); // 🌟 Modern UI alert
+            return StaticFileServer::generateErrorResponse(400, config);
         }
 
         // 2. Call static parsing structures
@@ -41,19 +31,14 @@ public:
         std::string fileData = uploaded.content;
 
         if (filename.empty()) {
-            return generateError(400); // 🌟 Modern UI alert
+            return StaticFileServer::generateErrorResponse(400, config);
         }
 
         // 4. Resolve the location storage destination directory path 
-        // 🌟 STRATEGY: Look for an explicit upload path rule. If empty, fall back safely to location root.
-        std::string uploadDir = loc.getUploadStore(); 
+        // Using loc.getRoot() as a stable alternative destination root directory definition
+        std::string uploadDir = loc.getRoot(); 
         if (uploadDir.empty()) {
-            uploadDir = loc.getRoot(); // Fallback strategy safely applied
-        }
-
-        // Secure formatting to prevent broken double slashes or missing divider characters
-        if (uploadDir.empty()) {
-            uploadDir = "./www/upload"; // Hard default fallback protection to preserve execution flow
+            uploadDir = "./www/upload"; 
         }
         if (uploadDir.at(uploadDir.length() - 1) != '/') {
             uploadDir += "/";
@@ -66,7 +51,7 @@ public:
         std::ofstream outFile(targetFilePath.c_str(), std::ios::binary | std::ios::out);
         if (!outFile.is_open()) {
             std::cerr << "[ERROR UPLOAD] Failed to open target path destination for writing." << std::endl;
-            return generateError(500); // 🌟 Launches your dark-themed 500 error page!
+            return StaticFileServer::generateErrorResponse(500, config);
         }
 
         outFile.write(fileData.c_str(), fileData.size());
