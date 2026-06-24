@@ -2,7 +2,7 @@
 
 #include "../request_response/HttpUtils.hpp"
 #include "../config_cgi/LocationConfig.hpp"
-#include "ErrorPageFactory.hpp" // 🌟 Linked to your high-fidelity error styles!
+#include "ErrorPageFactory.hpp"
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -11,6 +11,7 @@
 #include <vector>
 #include <cstdio>
 #include <iostream>
+#include <cerrno>
 
 class StaticFileServer {
 private:
@@ -26,31 +27,52 @@ private:
         return "text/plain";
     }
 
-    // 🌟 LINKED: Now calls your custom dashboard factory instead of printing plain unstyled text
-    static HttpResponse generateErrorResponse(int code) {
+public:
+    // 🌟 Check configuration directives first; fall back to ErrorPageFactory default templates
+    static HttpResponse generateErrorResponse(int code, const LocationConfig& loc) {
         HttpResponse res;
         res.statusCode = code;
         res.headers["Content-Type"] = "text/html";
+
+        // 1. Inspect configuration file rules for a custom specified error page
+        std::map<int, std::string> errorPages = loc.getErrorPages();
+        std::map<int, std::string>::iterator it = errorPages.find(code);
+
+        if (it != errorPages.end() && !it->second.empty()) {
+            std::string customPath = it->second;
+            std::ifstream customFile(customPath.c_str(), std::ios::binary);
+            
+            if (customFile.is_open()) {
+                std::cout << "[DEBUG ERROR] Serving configured error page file: " << customPath << std::endl;
+                std::stringstream buffer;
+                buffer << customFile.rdbuf();
+                res.body = buffer.str();
+                customFile.close();
+                return res;
+            }
+            std::cerr << "[WARN ERROR] Configured error_page file unresolvable: " << customPath << ". Falling back to defaults." << std::endl;
+        }
+
+        // 2. Default System Fallback
         res.body = ErrorPageFactory::getErrorPage(code);
         return res;
     }
 
-public:
     static HttpResponse serveFile(const HttpRequest& req, const LocationConfig& loc) {
         HttpResponse res;
         
         // 1. Guard Rule: Max Body Size Limit Caps
         if (req.body.length() > loc.getClientMaxBodySize()) {
-            return generateErrorResponse(413);
+            return generateErrorResponse(413, loc);
         }
 
         // 2. Guard Rule: Method Permissions Check
         std::vector<std::string> methods = loc.getAllowedMethods();
         if (!methods.empty() && std::find(methods.begin(), methods.end(), req.method) == methods.end()) {
-            return generateErrorResponse(405);
+            return generateErrorResponse(405, loc);
         }
 
-        // 🌟 EXPLICIT DESTRUCTIVE FILE REMOVAL TERMINATOR (DELETE Pathway Execution)
+        // 🌟 EXPLICIT DESTRUCTIVE FILE REMOVAL TERMINATOR
         if (req.method == "DELETE") {
             std::cout << "[DEBUG DELETE] Raw req.path: " << req.path << std::endl;
             std::cout << "[DEBUG DELETE] Location root: " << loc.getRoot() << std::endl;
@@ -58,9 +80,9 @@ public:
             std::string fileToDitch = req.path;
             
             if (fileToDitch.find("/upload/") == 0) {
-                fileToDitch = fileToDitch.substr(7); // Strips "/upload" leaving just "filename.txt"
+                fileToDitch = fileToDitch.substr(7); 
             } else if (fileToDitch.find("/") == 0) {
-                fileToDitch = fileToDitch.substr(1); // Strips leading slash if necessary
+                fileToDitch = fileToDitch.substr(1); 
             }
 
             std::string trueStoragePath = loc.getRoot();
@@ -78,7 +100,7 @@ public:
                 return res;
             } else {
                 std::cerr << "[DEBUG DELETE] std::remove failed for: " << trueStoragePath << " (Error: " << strerror(errno) << ")" << std::endl;
-                return generateErrorResponse(404);
+                return generateErrorResponse(404, loc);
             }
         }
 
@@ -90,14 +112,14 @@ public:
             if (!loc.getIndex().empty()) {
                 fullPath += loc.getIndex();
             } else {
-                return generateErrorResponse(403);
+                return generateErrorResponse(403, loc);
             }
         }
 
         // 5. Standard Operational Logic for Asset Data Reads
         std::ifstream file(fullPath.c_str(), std::ios::binary);
         if (!file.is_open()) {
-            return generateErrorResponse(404);
+            return generateErrorResponse(404, loc);
         }
 
         std::stringstream buffer;
