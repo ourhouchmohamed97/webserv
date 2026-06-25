@@ -1,7 +1,7 @@
 #include "ServerConfig.hpp"
 
 ServerConfig::ServerConfig(){
-    _clientMaxBodySize = 1000000;
+    _clientMaxBodySize = 0;
     _uploadPath = "";
 }
 ServerConfig::~ServerConfig(){}

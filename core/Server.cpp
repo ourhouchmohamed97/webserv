@@ -164,7 +164,30 @@ void Server::readFromClient(size_t i)
 
         LocationConfig loc = RouteMatcher::match(req.path, activeConfig);
         std::map<std::string, std::string> cgiMap = loc.getCgi();
+        // handle max body clients size ----->
+
+        size_t maxBodySize = activeConfig.getClientMaxBodySize();
         
+        // std::cout << "max maxBodySize:  " << maxBodySize << std::endl;
+        // std::cout << "loc.getClientMaxBodySize():   " << loc.getClientMaxBodySize() << std::endl;
+
+        if (loc.getClientMaxBodySize() != 0)
+            maxBodySize = loc.getClientMaxBodySize();
+
+        if (req.body.size() > maxBodySize)
+        {
+            HttpResponse res;
+            res.statusCode = 413;
+            res.headers["Content-Type"] = "text/html";
+            res.body = "<h1>413 Payload Too Large</h1>";
+
+            cli.responseBuffer = res.toString();
+            cli.state = WRITING;
+            fds[i].events = POLLOUT;
+            return;
+        }
+
+
         // 1. Resolve relative and absolute paths early
         std::string relative = req.path;
         if (relative.find(loc.getPath()) == 0)

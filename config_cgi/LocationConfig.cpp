@@ -2,7 +2,7 @@
 
 LocationConfig::LocationConfig(){
     _autoindex = false;
-    _clientMaxBodySize = 1000000;
+    _clientMaxBodySize = 0;
     _uploadPath = "";
     _redirectCode = 0;
 }

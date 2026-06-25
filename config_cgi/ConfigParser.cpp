@@ -193,7 +193,7 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                         i++;
                         if (i >= tokens.size() || !isNumber(tokens[i].value))
                             throw std::runtime_error("invalid client_max_body_size");
-                        server.setClientMaxBodySize(std::atoi(tokens[i].value.c_str()));
+                        loc.setClientMaxBodySize(std::atoi(tokens[i].value.c_str()));
                         i++;
                         if (i >= tokens.size() || tokens[i].value != ";")
                             throw std::runtime_error("missing ';'");
