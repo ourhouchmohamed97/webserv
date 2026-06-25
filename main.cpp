@@ -9,14 +9,11 @@
 int main(int argc, char* argv[])
 {
     // 1. Determine config path from arguments
-    std::string configPath = "webserv.conf";
-    if (argc > 2) {
+    if (argc != 2) {
         std::cerr << "Usage: " << argv[0] << " [config_file_path]" << std::endl;
         return 1;
     }
-    if (argc == 2) {
-        configPath = argv[1];
-    }
+    std::string configPath = argv[1];
 
     try
     {
