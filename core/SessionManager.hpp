@@ -5,7 +5,7 @@
 #include "../request_response/HttpUtils.hpp"
 #include <ctime>
 #include <sstream>
-
+#include <cstdlib>
 
 class SessionManager
 {
