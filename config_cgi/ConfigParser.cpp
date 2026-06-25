@@ -62,15 +62,7 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
 {
     std::vector<ServerConfig> servers;
     size_t i = 0;
-    bool rootSet = false;
-    bool indexSet = false;
-    bool uploadPathSet = false;
-    bool locRootSet = false;
-    bool locIndexSet = false;
-    bool locUploadSet = false;
-    bool locAutoindexSet = false;
-    bool locRedirectSet = false;
-    bool locMethodsSet = false;
+    bool uploadLocationFound = false;
 
     while (i < tokens.size())
     {
@@ -107,9 +99,6 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                 i++;
                 if (i >= tokens.size())
                     throw std::runtime_error("root: missing value");
-                if (rootSet)
-                    throw std::runtime_error("duplicate root directive");
-                rootSet = true;
                 server.setRoot(tokens[i].value);
                 i++;
 
@@ -122,9 +111,7 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                 i++;
                 if (i >= tokens.size())
                     throw std::runtime_error("upload_path missing value");
-                if(uploadPathSet)
-                    throw std::runtime_error("duplicate upload path");
-                uploadPathSet = true;
+
                 server.setUploadPath(tokens[i].value);
                 i++;
                 if (i >= tokens.size() || tokens[i].value != ";")
@@ -136,9 +123,6 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                 i++;
                 if (i >= tokens.size())
                     throw std::runtime_error("index: missing value");
-                if (indexSet)
-                    throw std::runtime_error("duplicate index");
-                indexSet = true;
                 server.setIndex(tokens[i].value);
                 i++;
                 if (i >= tokens.size() || tokens[i].value != ";")
@@ -182,9 +166,6 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                 while (i < tokens.size() && tokens[i].value != "}")
                 {
                     if (tokens[i].value == "root"){
-                        if (locRootSet)
-                            throw std::runtime_error("duplicate root in location");
-                        locRootSet = true;
                         i++;
                         if (i >= tokens.size())
                             throw std::runtime_error("location root: missing value");
@@ -195,9 +176,6 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                         i++;
                     }
                     else if (tokens[i].value == "redirect"){
-                        if (locRedirectSet)
-                            throw std::runtime_error("duplicate redirect in location");
-                        locRedirectSet = true;
                         i++;
                         if (i >= tokens.size() || !isNumber(tokens[i].value))
                             throw std::runtime_error("redirect: missing code");
@@ -222,9 +200,6 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                         i++;
                     }
                     else if (tokens[i].value == "autoindex"){
-                        if (locAutoindexSet)
-                            throw std::runtime_error("duplicate autoindex in location");
-                        locAutoindexSet = true;
                         i++;
                         if (i >= tokens.size())
                             throw std::runtime_error("autoindex missing value");
@@ -237,9 +212,6 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                         i++;
                     }
                     else if (tokens[i].value == "allow_methods"){
-                        if (locMethodsSet)
-                            throw std::runtime_error("duplicate allow_methods in location");
-                        locMethodsSet = true;
                         i++;
                         if (i < tokens.size() && tokens[i].value == ";")
                             throw std::runtime_error("allow_methods: missing methods");
@@ -256,9 +228,6 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                         i++;
                     }
                     else if (tokens[i].value == "upload_path"){
-                        if (locUploadSet)
-                            throw std::runtime_error("duplicate upload_path in location");
-                        locUploadSet = true;
                         i++;
                         if (i >= tokens.size())
                             throw std::runtime_error("upload_path missing value");
@@ -269,9 +238,6 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                         i++;
                     }
                     else if (tokens[i].value == "index"){
-                        if (locIndexSet)
-                            throw std::runtime_error("duplicate index in location");
-                        locIndexSet = true;
                         i++;
                         if (i >= tokens.size())
                             throw std::runtime_error("location index: missing value");
@@ -312,6 +278,13 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
         if (i >= tokens.size())
             throw std::runtime_error("unclosed server block (missing '}')");
         i++;
+        std::vector<LocationConfig> locations = server.getLocations();
+        for (size_t j = 0; j < locations.size(); j++){
+            if (locations[j].getPath() == "/upload")
+                uploadLocationFound = true;
+        }
+        if (!uploadLocationFound)
+            throw std::runtime_error("missing /upload location");
         servers.push_back(server);
     }
     return servers;
