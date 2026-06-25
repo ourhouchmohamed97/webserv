@@ -154,6 +154,7 @@ void Server::readFromClient(size_t i)
         }
 
         HttpRequest req = RequestParser::parse(processedBuffer);
+
         cli.requestBuffer.clear(); 
 
         ServerConfig activeConfig;
@@ -174,19 +175,31 @@ void Server::readFromClient(size_t i)
 
         std::string scriptPath = loc.getRoot() + relative;
 
-        // 2. Safely capture file extension rules
+        
         size_t dotPos = scriptPath.find_last_of(".");
         std::string ext = (dotPos != std::string::npos) ? scriptPath.substr(dotPos) : "";
 
-        // 🌟 FIX: Verify extension is mapped in config before blindly flags CGI routing branches
+        
         bool isCgiRequest = (!cgiMap.empty() && !ext.empty() && cgiMap.find(ext) != cgiMap.end());
 
-        // Branch 1: If path maps to POST on an allowed upload route directory rules
-        if (req.method == "POST" && req.path == "/upload") {
+        // handle session here ------------>
+        if (req.path == "/session")
+        {
+            SessionManager Session_manage;
+            HttpResponse res = Session_manage.handle(req);
+            cli.responseBuffer = res.toString();
+
+            cli.state = WRITING;
+            fds[i].events = POLLOUT;
+            return;
+        }
+        // handle upload here ------------>
+        else if (req.method == "POST" && req.path == "/upload") 
+        {
             HttpResponse res = UploadHandler::handle(req, loc, activeConfig);
             cli.responseBuffer = res.toString();
         }
-        // Branch 2: Handle via verified CGI configuration rules matching extension configurations
+       // handle CGI here ------------>
         else if (isCgiRequest) {
             std::string interpreterPath = "";
             if (cgiMap.find(ext) != cgiMap.end()) {

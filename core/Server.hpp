@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Client.hpp"
-#include "Request.hpp"
 #include "../config_cgi/ServerConfig.hpp"
 #include "../config_cgi/cgi.hpp"
 #include "../request_response/RequestParser.hpp"
@@ -22,6 +21,7 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <cstring>
+#include "SessionManager.hpp"
 
 class Server
 {
