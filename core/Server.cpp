@@ -88,19 +88,50 @@ void Server::acceptClient(int serverfd)
 
 }
 
-
-bool    Server::isReqComplete(const std::string &req)
+// Robust tracking logic to evaluate block boundaries completely
+bool Server::isReqComplete(const std::string &req)
 {
-    return req.find("\r\n\r\n") != std::string::npos;
+    size_t header_end = req.find("\r\n\r\n");
+    if (header_end == std::string::npos)
+        return false;
+
+    // Check if the Browser utilizes chunk transfer streams instead of standard layout definitions
+    if (req.find("Transfer-Encoding: chunked") != std::string::npos || 
+        req.find("transfer-encoding: chunked") != std::string::npos) {
+        // A chunked message ends structurally with a terminative sequence token: "0\r\n\r\n"
+        return (req.rfind("0\r\n\r\n") == req.length() - 5);
+    }
+
+    size_t pos = req.find("Content-Length:");
+    if (pos == std::string::npos)
+        pos = req.find("content-length:");
+    
+    if (pos != std::string::npos && pos < header_end)
+    {
+        size_t value_start = pos + 15;
+        size_t value_end = req.find("\r\n", value_start);
+        if (value_end != std::string::npos)
+        {
+            std::string len_str = req.substr(value_start, value_end - value_start);
+            std::stringstream ss(len_str);
+            size_t content_length = 0;
+            ss >> content_length;
+
+            size_t body_received = req.length() - (header_end + 4);
+            return (body_received >= content_length);
+        }
+    }
+    
+    return true;
 }
 
-
-void    Server::readFromClient(size_t i)
+void Server::readFromClient(size_t i)
 {
     int fd  = fds[i].fd;
     char buffer[4100];
 
-    ssize_t bytes = recv(fd, buffer, sizeof(buffer), 0);
+    std::memset(buffer, 0, sizeof(buffer));
+    ssize_t bytes = recv(fd, buffer, sizeof(buffer) - 1, 0);
 
     if (bytes == 0 || bytes == -1)
     {
@@ -108,53 +139,97 @@ void    Server::readFromClient(size_t i)
         return;
     }
 
-    Client &cli =  clients.find(fd)->second;
+    Client &cli = clients.find(fd)->second;
     cli.requestBuffer.append(buffer, bytes);
 
     if (!isReqComplete(cli.requestBuffer))
         return;
-    try {
-        // 1 Parse the buffer
-        HttpRequest req = RequestParser::parse(cli.requestBuffer);
-        cli.requestBuffer.clear(); // Safe to wipe now that we've parsed it
 
-        // 2 Fallback to first configuration profile or determine the closest match
-        ServerConfig activeConfig;
-        if (!_configs.empty()) {
-            activeConfig = _configs[0]; // Upgrade later to select by Host header port if needed
+    try {
+        // Pre-Process Request Buffer to strip chunk flags if detected
+        std::string processedBuffer = cli.requestBuffer;
+        if (processedBuffer.find("Transfer-Encoding: chunked") != std::string::npos ||
+            processedBuffer.find("transfer-encoding: chunked") != std::string::npos) {
+            
+            size_t header_end = processedBuffer.find("\r\n\r\n");
+            std::string headers = processedBuffer.substr(0, header_end + 4);
+            std::string rawBody = processedBuffer.substr(header_end + 4);
+
+            std::pair<bool, std::string> decodeResult = ChunkDecoder::decode(rawBody);
+            processedBuffer = headers + decodeResult.second;
         }
 
-        // 3 Match rules dynamically using prefix matcher
+        HttpRequest req = RequestParser::parse(processedBuffer);
+        cli.requestBuffer.clear(); 
+
+        ServerConfig activeConfig;
+        if (!_configs.empty()) {
+            activeConfig = _configs[0]; 
+        }
+
         LocationConfig loc = RouteMatcher::match(req.path, activeConfig);
 
-        // 4 Divert to CGI processing if configuration map rules match extensions
+        // 🌟 CRITICAL ROUTE BRANCH SEPARATION WORKER
         std::map<std::string, std::string> cgiMap = loc.getCgi();
-        if (!cgiMap.empty()) {
+        
+        // Branch 1: If path maps to POST on an allowed upload route directory rules
+        if (req.method == "POST" && req.path == "/upload") {
+            HttpResponse res = UploadHandler::handle(req, loc);
+            cli.responseBuffer = res.toString();
+        }
+        // Branch 2: Handle via CGI configuration rules
+        else if (!cgiMap.empty()) {
             // Determine script path by resolving req.path against the root directory
-            std::string scriptPath = loc.getRoot() + req.path;
-            
-            // Call your teammate's CGI execution module passing your parsed data types
+            // std::string scriptPath = loc.getRoot() + req.path;
+            std::string relative = req.path;
+
+            if (relative.find(loc.getPath()) == 0)
+                relative = relative.substr(loc.getPath().size());
+
+            if (!relative.empty() && relative[0] != '/')
+                relative = "/" + relative;
+
+            std::string scriptPath = loc.getRoot() + relative;
+
             CGI cgiHandler;
             std::string cgiOutput = cgiHandler.execute(scriptPath, req.method, req.body, req.headers);
-            
-            // Build the clean HTTP response layout from the script's raw stdout text
-            if (cgiOutput.find("HTTP/1.1") == 0 || cgiOutput.find("HTTP/1.0") == 0) {
-                cli.responseBuffer = cgiOutput;
-            } else {
-                std::stringstream ss;
-                ss << "HTTP/1.1 200 OK\r\n"
-                   << "Content-Length: " << cgiOutput.length() << "\r\n"
-                   << "Content-Type: text/html\r\n\r\n"
-                   << cgiOutput;
-                cli.responseBuffer = ss.str();
+
+            size_t headerEnd = cgiOutput.find("\r\n\r\n");
+            if (headerEnd == std::string::npos)
+                headerEnd = cgiOutput.find("\n\n");
+
+            std::string cgiHeaders;
+            std::string cgiBody;
+
+            if (headerEnd != std::string::npos)
+            {
+                size_t sepLen = (cgiOutput.find("\r\n\r\n") != std::string::npos) ? 4 : 2;
+                cgiHeaders = cgiOutput.substr(0, headerEnd);
+                cgiBody = cgiOutput.substr(headerEnd + sepLen);
             }
-        } else {
-            // 5. Serve native asset structures or save file upload sequences cleanly
+            else
+            {
+                cgiHeaders = "Content-Type: text/html";
+                cgiBody = cgiOutput;
+            }
+            std::stringstream ss;
+            ss << "HTTP/1.1 200 OK\r\n"
+            << cgiHeaders << "\r\n"
+            << "Content-Length: " << cgiBody.length() << "\r\n"
+            << "\r\n"
+            << cgiBody;
+
+            cli.responseBuffer = ss.str();
+
+            
+        } 
+        // Branch 3: Default static file server logic paths (GET / DELETE operations)
+        else {
             HttpResponse res = StaticFileServer::serveFile(req, loc);
             cli.responseBuffer = res.toString();
         }
     } catch (const std::exception& e) {
-        // Safeguard if request validation formatting issues surface
+        std::cerr << "Parser Engine Fail Alert: " << e.what() << std::endl;
         cli.responseBuffer = "HTTP/1.1 400 Bad Request\r\nContent-Length: 15\r\n\r\n400 Bad Request";
     }
 

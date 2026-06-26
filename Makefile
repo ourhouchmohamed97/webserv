@@ -13,6 +13,8 @@ HEADERS = \
 	core/Client.hpp \
 	core/Request.hpp \
 	core/Server.hpp \
+	core/UploadHandler.hpp \
+	core/UploadHandler.hpp \
 	request_response/AutoIndex.hpp \
 	request_response/ChunkDecoder.hpp \
 	request_response/ErrorPageFactory.hpp \
