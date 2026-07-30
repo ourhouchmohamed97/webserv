@@ -62,6 +62,7 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
 {
     std::vector<ServerConfig> servers;
     size_t i = 0;
+    bool uploadLocationFound = false;
 
     while (i < tokens.size())
     {
@@ -74,27 +75,25 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
         ServerConfig server;
         while (i < tokens.size() && tokens[i].value != "}")
         {
-            if (tokens[i].value == "listen")
-{
-    i++;
-
-    if (i >= tokens.size())
-        throw std::runtime_error("listen: missing value");
-
-    while (i < tokens.size() && tokens[i].value != ";")
-    {
-        if (!isNumber(tokens[i].value))
-            throw std::runtime_error("listen: invalid port");
-        int port = std::atoi(tokens[i].value.c_str());
-        if (port < 1 || port > 65535)
-            throw std::runtime_error("listen: port out of range");
-        server.addPort(port);
-        i++;
-    }
-    if (i >= tokens.size() || tokens[i].value != ";")
-        throw std::runtime_error("listen: missing ';'");
-    i++;
-}
+            if (tokens[i].value == "listen"){
+                i++;
+            if (i >= tokens.size())
+                throw std::runtime_error("listen: missing value");
+            if (tokens[i].value == ";")
+                throw std::runtime_error("listen: missing port");
+            while (i < tokens.size() && tokens[i].value != ";"){
+                if (!isNumber(tokens[i].value))
+                    throw std::runtime_error("listen: invalid port");
+                int port = std::atoi(tokens[i].value.c_str());
+                if (port < 1 || port > 65535)
+                    throw std::runtime_error("listen: port out of range");
+                server.addPort(port);
+               i++;
+            }
+            if (i >= tokens.size() || tokens[i].value != ";")
+                throw std::runtime_error("listen: missing ';'");
+            i++;
+            }
             else if (tokens[i].value == "root")
             {
                 i++;
@@ -112,6 +111,7 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                 i++;
                 if (i >= tokens.size())
                     throw std::runtime_error("upload_path missing value");
+
                 server.setUploadPath(tokens[i].value);
                 i++;
                 if (i >= tokens.size() || tokens[i].value != ";")
@@ -129,6 +129,28 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                     throw std::runtime_error("missing ';' after index");
                 i++;
             }
+            else if (tokens[i].value == "client_max_body_size"){
+                i++;
+                if (i >= tokens.size() || !isNumber(tokens[i].value))
+                    throw std::runtime_error("invalid client_max_body_size");
+                server.setClientMaxBodySize(std::atoi(tokens[i].value.c_str()));
+                i++;
+                if (i >= tokens.size() || tokens[i].value != ";")
+                    throw std::runtime_error("missing ';'");
+                i++;
+            }
+            else if (tokens[i].value == "error_page"){
+                i++;
+                int code = std::atoi(tokens[i].value.c_str());
+                i++;
+                if (i >= tokens.size())
+                    throw std::runtime_error("error_page missing path");
+                server.addErrorPage(code, tokens[i].value);
+                i++;
+                if (i >= tokens.size() || tokens[i].value != ";")
+                    throw std::runtime_error("missing ';'");
+                i++;
+            }
             else if (tokens[i].value == "location")
             {
                 i++;
@@ -143,17 +165,66 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                 loc.setPath(path);
                 while (i < tokens.size() && tokens[i].value != "}")
                 {
-                    if (tokens[i].value == "root")
-                    {
+                    if (tokens[i].value == "root"){
                         i++;
                         if (i >= tokens.size())
                             throw std::runtime_error("location root: missing value");
-
                         loc.setRoot(tokens[i].value);
                         i++;
-
                         if (i >= tokens.size() || tokens[i].value != ";")
                             throw std::runtime_error("missing ';' after location root");
+                        i++;
+                    }
+                    else if (tokens[i].value == "redirect"){
+                        i++;
+                        if (i >= tokens.size() || !isNumber(tokens[i].value))
+                            throw std::runtime_error("redirect: missing code");
+                        loc.setRedirectCode(std::atoi(tokens[i].value.c_str()));
+                        i++;
+                        if (i >= tokens.size())
+                            throw std::runtime_error("redirect: missing target");
+                        loc.setRedirectTarget(tokens[i].value);
+                        i++;
+                        if (i >= tokens.size() || tokens[i].value != ";")
+                            throw std::runtime_error("missing ';' after redirect");
+                        i++;
+                    }
+                    else if (tokens[i].value == "client_max_body_size"){
+                        i++;
+                        if (i >= tokens.size() || !isNumber(tokens[i].value))
+                            throw std::runtime_error("invalid client_max_body_size");
+                        loc.setClientMaxBodySize(std::atoi(tokens[i].value.c_str()));
+                        i++;
+                        if (i >= tokens.size() || tokens[i].value != ";")
+                            throw std::runtime_error("missing ';'");
+                        i++;
+                    }
+                    else if (tokens[i].value == "autoindex"){
+                        i++;
+                        if (i >= tokens.size())
+                            throw std::runtime_error("autoindex missing value");
+                        if (tokens[i].value != "on" && tokens[i].value != "off")
+                            throw std::runtime_error("autoindex must be on or off");
+                        loc.setAutoindex(tokens[i].value == "on");
+                        i++;
+                        if (i >= tokens.size() || tokens[i].value != ";")
+                            throw std::runtime_error("missing ';'");
+                        i++;
+                    }
+                    else if (tokens[i].value == "allow_methods"){
+                        i++;
+                        if (i < tokens.size() && tokens[i].value == ";")
+                            throw std::runtime_error("allow_methods: missing methods");
+                        while (i < tokens.size() && tokens[i].value != ";"){
+                            if (tokens[i].value != "GET"
+                                && tokens[i].value != "POST"
+                                && tokens[i].value != "DELETE")
+                                    throw std::runtime_error("invalid method: " + tokens[i].value);
+                                loc.addAllowedMethod(tokens[i].value);
+                            i++;
+                        }
+                        if (i >= tokens.size() || tokens[i].value != ";")
+                            throw std::runtime_error("missing ';' after methods");
                         i++;
                     }
                     else if (tokens[i].value == "upload_path"){
@@ -166,12 +237,10 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
                             throw std::runtime_error("missing ';' after upload_path");
                         i++;
                     }
-                    else if (tokens[i].value == "index")
-                    {
+                    else if (tokens[i].value == "index"){
                         i++;
                         if (i >= tokens.size())
                             throw std::runtime_error("location index: missing value");
-
                         loc.setIndex(tokens[i].value);
                         i++;
                         if (i >= tokens.size() || tokens[i].value != ";")
@@ -209,6 +278,13 @@ std::vector<ServerConfig> ConfigParser::parse(const std::vector<Token>& tokens)
         if (i >= tokens.size())
             throw std::runtime_error("unclosed server block (missing '}')");
         i++;
+        std::vector<LocationConfig> locations = server.getLocations();
+        for (size_t j = 0; j < locations.size(); j++){
+            if (locations[j].getPath() == "/upload")
+                uploadLocationFound = true;
+        }
+        if (!uploadLocationFound)
+            throw std::runtime_error("missing /upload location");
         servers.push_back(server);
     }
     return servers;

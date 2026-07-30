@@ -2,8 +2,9 @@
 
 LocationConfig::LocationConfig(){
     _autoindex = false;
-    _clientMaxBodySize = 1000000;
+    _clientMaxBodySize = 0;
     _uploadPath = "";
+    _redirectCode = 0;
 }
 LocationConfig::~LocationConfig(){}
 
@@ -25,10 +26,26 @@ void LocationConfig::setRoot(const std::string& root){
 std::vector<std::string>  LocationConfig::getAllowedMethods() const{
     return _allowedMethods;
 }
-void LocationConfig::setAllowedMethods(const std::vector<std::string>& methods){
-    _allowedMethods = methods;
+void LocationConfig::addAllowedMethod(const std::string& method)
+{
+    _allowedMethods.push_back(method);
 }
-
+void LocationConfig::setRedirectCode(int code)
+{
+    _redirectCode = code;
+}
+void LocationConfig::setRedirectTarget(const std::string& target)
+{
+    _redirectTarget = target;
+}
+int LocationConfig::getRedirectCode() const
+{
+    return _redirectCode;
+}
+std::string LocationConfig::getRedirectTarget() const
+{
+    return _redirectTarget;
+}
 bool LocationConfig::getAutoindex() const{
     return _autoindex;
 }

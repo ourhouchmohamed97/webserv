@@ -1,6 +1,7 @@
 #include "cgi.hpp"
 
-std::string CGI::execute(const std::string& scriptPath,const std::string& method,const std::string& body,
+std::string CGI::execute(const std::string& interpreter, const std::string& scriptPath,
+                        const std::string& method,const std::string& body,
     const std::map<std::string, std::string>& headers){
     (void)headers;
     int inPipe[2];
@@ -18,7 +19,11 @@ std::string CGI::execute(const std::string& scriptPath,const std::string& method
         close(outPipe[1]);
         close(inPipe[1]);
         close(outPipe[0]);
-        char *argv[] = {(char*)scriptPath.c_str(), NULL};
+        char *argv[] = {
+            (char *)interpreter.c_str(),
+            (char *)scriptPath.c_str(),
+            NULL
+        };
         std::stringstream ss;
         ss << body.size();
         std::vector<std::string> env;
@@ -31,7 +36,7 @@ std::string CGI::execute(const std::string& scriptPath,const std::string& method
         for (size_t i = 0; i < env.size(); i++)
             envp.push_back((char*)env[i].c_str());
         envp.push_back(NULL);
-        execve(scriptPath.c_str(), argv, envp.data());
+        execve(interpreter.c_str(), argv, envp.data());
         exit(1);
     }
     else{

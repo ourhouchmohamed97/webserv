@@ -11,8 +11,8 @@ HEADERS = \
 	config_cgi/ServerConfig.hpp \
 	config_cgi/Token.hpp \
 	core/Client.hpp \
-	core/Request.hpp \
 	core/Server.hpp \
+	core/SessionManager.hpp \
 	core/UploadHandler.hpp \
 	core/UploadHandler.hpp \
 	request_response/AutoIndex.hpp \
@@ -35,8 +35,8 @@ SRC = \
 	config_cgi/ServerConfig.cpp \
 	config_cgi/Token.cpp \
 	core/Client.cpp \
-	core/Request.cpp \
 	core/Server.cpp \
+	core/SessionManager.cpp \
 	main.cpp \
 
 OBJ = $(SRC:.cpp=.o)

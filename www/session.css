@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap');
+
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-navbar: rgba(10, 10, 18, 0.85);
+  --bg-card: #0f0f18;
+  --border-default: #1e1e2e;
+  --border-subtle: #16161f;
+  --text-primary: #ffffff;
+  --text-secondary: #9999aa;
+  --text-muted: #666677;
+  --accent-purple: #7c3aed;
+  --accent-purple-dark: #6d28d9;
+  --accent-purple-light: #a78bfa;
+  --accent-green: #10b981;
+  --accent-green-bg: rgba(16, 185, 129, 0.1);
+  --accent-purple-bg: rgba(124, 58, 237, 0.1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body { 
+  font-family: 'Inter', sans-serif; 
+  background-color: var(--bg-primary); 
+  color: var(--text-secondary); 
+  line-height: 1.6; 
+  min-height: 100vh; 
+  display: flex; 
+  flex-direction: column; 
+}
+
+/* Navbar Architecture */
+.navbar { 
+  position: fixed; 
+  top: 0; left: 0; right: 0; 
+  height: 60px; 
+  background: var(--bg-navbar); 
+  backdrop-filter: blur(20px); 
+  -webkit-backdrop-filter: blur(20px); 
+  border-bottom: 1px solid var(--border-subtle); 
+  display: flex; 
+  align-items: center; 
+  z-index: 1000; 
+}
+.nav-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; width: 100%; display: flex; align-items: center; justify-content: space-between; }
+.nav-links { display: flex; align-items: center; gap: 4px; }
+.nav-link { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--text-secondary); text-decoration: none; transition: all 0.2s; }
+.nav-link:hover, .nav-link.active { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+.nav-icon { width: 16px; height: 16px; opacity: 0.7; fill: none; stroke: currentColor; stroke-width: 2; }
+
+/* Content Grid Layout */
+.page-content { padding: 100px 24px 60px 24px; flex: 1; display: flex; justify-content: center; }
+.dashboard-container { max-width: 800px; width: 100%; display: flex; flex-direction: column; gap: 24px; }
+
+/* Hero Text */
+.hero-section { text-align: center; margin-bottom: 12px; }
+.hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: 2.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+.hero-desc { color: var(--text-muted); font-size: 15px; }
+
+/* Layout Cards */
+.main-card { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 12px; padding: 32px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); position: relative; overflow: hidden; }
+.hero-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; border: 1px solid transparent; }
+.badge-new { background: var(--accent-green-bg); color: var(--accent-green); border-color: rgba(16, 185, 129, 0.2); }
+.badge-return { background: var(--accent-purple-bg); color: var(--accent-purple-light); border-color: rgba(124, 58, 237, 0.2); }
+.status-title { font-size: 1.5rem; color: var(--text-primary); font-weight: 700; margin-bottom: 10px; }
+.status-desc { color: var(--text-secondary); font-size: 14px; }
+
+/* Telemetry Stats */
+.telemetry-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media(min-width: 600px) { .telemetry-grid { grid-template-columns: repeat(2, 1fr); } }
+.telemetry-card { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 8px; }
+.metric-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+.metric-value { font-size: 15px; font-weight: 500; color: var(--text-primary); word-break: break-all; font-family: monospace; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-subtle); }
+.visits-counter { font-family: 'Playfair Display', Georgia, serif; font-size: 3.5rem; font-weight: 900; line-height: 1; color: var(--accent-purple-light); margin-top: 4px; }
+
+/* Footer Link Structure */
+.footer { border-top: 1px solid var(--border-subtle); padding: 24px 0; text-align: center; color: var(--text-muted); font-size: 12px; margin-top: auto; }

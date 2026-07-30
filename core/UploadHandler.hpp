@@ -2,64 +2,62 @@
 
 #include "../request_response/HttpUtils.hpp"
 #include "../config_cgi/LocationConfig.hpp"
+#include "../config_cgi/ServerConfig.hpp"
 #include "../request_response/MultipartParser.hpp"
-#include <fstream>
+#include "../request_response/StaticFileServer.hpp"
 #include <sstream>
 #include <iostream>
 
 class UploadHandler {
 public:
-    static HttpResponse handle(const HttpRequest& req, const LocationConfig& loc) {
+    static HttpResponse handle(const HttpRequest& req, const LocationConfig& loc, const ServerConfig& config) {
         HttpResponse res;
 
-        // 1. Verify that a Content-Type header exists and contains a multipart boundary definition
+        // 1. Verify Content-Type header integrity definitions
         std::map<std::string, std::string>::const_iterator it = req.headers.find("Content-Type");
         if (it == req.headers.end()) {
             it = req.headers.find("content-type");
         }
         
         if (it == req.headers.end() || it->second.find("multipart/form-data") == std::string::npos) {
-            res.statusCode = 400;
-            res.headers["Content-Type"] = "text/html";
-            res.body = "<html><body><h1>400 Bad Request: Expected Multipart Payload</h1></body></html>";
-            return res;
+            return StaticFileServer::generateErrorResponse(400, config);
         }
 
-        // 2. Call your static parser directly using the entire HttpRequest object
+        // 2. Call static parsing structures
         UploadedFile uploaded = MultipartParser::parse(req);
 
-        // 3. Extract metadata (Using .content for the file byte stream array)
+        // 3. Extract metadata streams
         std::string filename = uploaded.filename;
-        std::string fileData = uploaded.content; // 🌟 Fixed: Changed from .fileData to .content
+        std::string fileData = uploaded.content;
 
         if (filename.empty()) {
-            res.statusCode = 400;
-            res.headers["Content-Type"] = "text/html";
-            res.body = "<html><body><h1>400 Bad Request: Target Filename Entry Not Found</h1></body></html>";
-            return res;
+            return StaticFileServer::generateErrorResponse(400, config);
         }
 
         // 4. Resolve the location storage destination directory path 
-        std::string uploadDir = loc.getRoot();
-        if (uploadDir.empty() || uploadDir.at(uploadDir.length() - 1) != '/') {
+        // Using loc.getRoot() as a stable alternative destination root directory definition
+        std::string uploadDir = loc.getRoot(); 
+        if (uploadDir.empty()) {
+            uploadDir = "./www/upload"; 
+        }
+        if (uploadDir.at(uploadDir.length() - 1) != '/') {
             uploadDir += "/";
         }
 
         std::string targetFilePath = uploadDir + filename;
+        std::cout << "[DEBUG UPLOAD] Target file routing location resolved to: " << targetFilePath << std::endl;
 
-        // 5. Open a raw binary write stream to drop the payload onto disk storage
+        // 5. Open raw binary stream channels
         std::ofstream outFile(targetFilePath.c_str(), std::ios::binary | std::ios::out);
         if (!outFile.is_open()) {
-            res.statusCode = 500;
-            res.headers["Content-Type"] = "text/html";
-            res.body = "<html><body><h1>500 Internal Server Error: Disk Write Access Blocked</h1></body></html>";
-            return res;
+            std::cerr << "[ERROR UPLOAD] Failed to open target path destination for writing." << std::endl;
+            return StaticFileServer::generateErrorResponse(500, config);
         }
 
         outFile.write(fileData.c_str(), fileData.size());
         outFile.close();
 
-        // 6. Build the clear, successful return package payload string
+        // 6. Build completion metrics packet return payload
         res.statusCode = 201; 
         res.headers["Content-Type"] = "text/plain";
         res.body = "File successfully ingested and written to system storage matrix.\n";
