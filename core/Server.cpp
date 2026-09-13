@@ -1,9 +1,18 @@
 #include "Server.hpp"
 
-Server::Server(std::vector<int> _port, const std::vector<ServerConfig>& configs) 
+Server::Server(std::vector<int> _port,
+               const std::vector<ServerConfig>& configs)
     : ports(_port), _configs(configs)
 {
-    for(size_t i = 0; i < ports.size(); i++)
+    char *env = std::getenv("PORT");
+
+    if (env)
+    {
+        ports.clear();
+        ports.push_back(std::atoi(env));
+    }
+
+    for (size_t i = 0; i < ports.size(); i++)
         setupSocket(ports[i]);
 }
 

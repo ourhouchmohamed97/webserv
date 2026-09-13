@@ -16,8 +16,4 @@ public:
                         const std::string& method,
                         const std::string& body,
                         const std::map<std::string, std::string>& headers);
-private:
-    void buildEnvr();
-    void setupPipe();
-    void forkProgress();
 };

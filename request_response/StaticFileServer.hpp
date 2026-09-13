@@ -13,6 +13,8 @@
 #include <cstdio>
 #include <iostream>
 #include <cerrno>
+#include "AutoIndex.hpp"
+#include <sys/stat.h>
 
 class StaticFileServer {
 private:
@@ -115,13 +117,49 @@ public:
         std::string fullPath = rootPath + reqPath;
 
         // 4. Handle Directory Access Requests
-        if (!reqPath.empty() && reqPath.at(reqPath.length() - 1) == '/') {
-            if (!loc.getIndex().empty()) {
-                fullPath += loc.getIndex();
-            } else {
-                return generateErrorResponse(403, config);
-            }
+        // if (!reqPath.empty() && reqPath.at(reqPath.length() - 1) == '/') {
+        //     if (!loc.getIndex().empty()) {
+        //         fullPath += loc.getIndex();
+        //     } else {
+        //         return generateErrorResponse(403, config);
+        //     }
+        // }
+struct stat st;
+
+if (stat(fullPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+{
+    std::string dirPath = fullPath;
+
+    if (!dirPath.empty() && dirPath[dirPath.length() - 1] != '/')
+        dirPath += "/";
+
+    if (!loc.getIndex().empty())
+    {
+        std::string indexPath = dirPath + loc.getIndex();
+
+        std::ifstream indexFile(indexPath.c_str(), std::ios::binary);
+        if (indexFile.is_open())
+        {
+            std::stringstream buffer;
+            buffer << indexFile.rdbuf();
+
+            res.statusCode = 200;
+            res.headers["Content-Type"] = "text/html";
+            res.body = buffer.str();
+            return res;
         }
+    }
+
+    if (loc.getAutoindex())
+    {
+        res.statusCode = 200;
+        res.headers["Content-Type"] = "text/html";
+        res.body = AutoIndex::generate(dirPath, req.path);
+        return res;
+    }
+
+    return generateErrorResponse(403, config);
+}   
 
         // 🌟 Add print trackers to find out exactly where the 404 triggers
         std::cout << "[STATIC SERVER DEBUG] Attempting file read at target path: " << fullPath << std::endl;
